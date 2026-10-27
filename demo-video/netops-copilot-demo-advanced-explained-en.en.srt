@@ -1,0 +1,51 @@
+1
+00:00:00,000 --> 00:00:10,196
+Why was this made, for bigger roads? The simple demo proves the idea on 5 nodes. Real backbones have regions, reflectors, and many neighbours. So, the same traffic light, on a 13-node backbone.
+
+2
+00:00:10,196 --> 00:00:26,511
+Advanced diagram: Region A on the left, Region B on the right, route reflector rr1 in gold on top, and peers, customers, and transit outside.
+
+3
+00:00:26,511 --> 00:00:40,786
+Diagram, in plain words: Region A has coreA1, coreA2, edgeA1, edgeA2. Region B has coreB1, coreB2, edgeB1. Two roads join the regions. rr1 is the central post office for BGP routes. cust1 has two gates, edgeA2 and edgeB1, so its exit can move.
+
+4
+00:00:40,786 --> 00:00:50,982
+What is a test here? Same rule as the simple demo: propose, simulate, compare. We watch five prefixes and six journeys, including cross-region ones. Eight tests now: the six above, plus a /32 blackhole and an RPKI check.
+
+5
+00:00:50,982 --> 00:01:00,159
+Terminal, mock run: link failure. Verdict: ALLOW. Traffic reroutes, and all watched flows survive.
+
+6
+00:01:00,159 --> 00:01:12,395
+Terminal, mock run: BGP session down. Verdict: BLOCK. The peer prefix is lost, and its flow breaks, while customers stay intact.
+
+7
+00:01:12,395 --> 00:01:22,591
+Terminal, mock run: LOCAL_PREF exit shift. Verdict: REVIEW. The customer exit moves to edgeB1, and all flows survive, so a human must confirm the new exit.
+
+8
+00:01:22,591 --> 00:01:34,827
+Terminal, mock run: more-specific hijack. Verdict: BLOCK. Customer journeys are diverted to a dead end, even though the main table looks unchanged.
+
+9
+00:01:34,827 --> 00:01:47,063
+Terminal, mock run: route reflector failure. Verdict: BLOCK. Many internal routes are lost, and all six flows break.
+
+10
+00:01:47,063 --> 00:02:00,318
+Terminal, mock run: DDoS blackhole. Verdict: REVIEW. Only the victim host 203.0.113.130 drops, on a /32 route. The cust2 /25 route stays intact, and all other flows survive, so a human must confirm the victim.
+
+11
+00:02:00,318 --> 00:02:13,574
+Terminal, recorded replay: RPKI invalid origin. Verdict: BLOCK. Peer2 announces the cust1 prefix, but its ROA allows AS64498 only, so the announcement must be rejected. This one has no live run.
+
+12
+00:02:13,574 --> 00:02:23,770
+Terminal, mock run: AS_PATH prepend. Verdict: REVIEW. The exit moves by a different method, flows survive, so a human must confirm.
+
+13
+00:02:23,770 --> 00:02:33,967
+Conclusion: same policy, bigger topology. Safe passes, broken stops, and a new exit waits for a human, even at 13 nodes. A /32 blackhole drops one host, not a whole prefix. All data is fictional.

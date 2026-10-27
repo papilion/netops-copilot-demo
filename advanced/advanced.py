@@ -69,6 +69,18 @@ SCENARIOS = {
         "intent": "Shutdown rr1; iBGP clients must lose reflected routes and all watched flows must break.",
         "change_dir": ADV_LAB / "changes" / "rr-failure",
     },
+    "blackhole-rtbh-cust2": {
+        "title": "DDoS blackhole (RTBH): drop only victim host 203.0.113.130/32 at edgeB1",
+        "intent": "DDoS mitigation for cust2: drop ONLY the victim host 203.0.113.130/32 at edgeB1 (border /32 Null0 route, the forwarding effect an RTBH trigger installs). A DDoS usually targets one host, so operators blackhole the /32, not the whole cust2 /25 — blackholing the whole /25 would also kill the customer's innocent hosts on the same prefix, so the /32 minimises collateral. The /25 route must stay intact and every other watched prefix and flow must stay intact, and the victim drop must be recognised as intended, not as an accidental outage.",
+        "change_dir": ADV_LAB / "changes" / "blackhole-rtbh-cust2",
+        "intended_victim": "203.0.113.130/32",
+    },
+    "rpki-invalid-origin": {
+        "title": "RPKI invalid origin: peer2 announces cust1 203.0.113.0/24 (ROA allows AS64498 only)",
+        "intent": "RPKI origin validation (recorded replay only): cust1's prefix 203.0.113.0/24 has a fictional ROA for AS64498 only. An announcement of the same prefix by peer2 (AS64499) is invalid and must be rejected (BLOCK). A legitimate announcement by AS64498 is valid and must not be blocked. Batfish does not expose a verifiable ROV state, so this scenario is recorded-replay-only — see the policy note for E5.",
+        "change_dir": None,
+        "live_supported": False,
+    },
     "aspath-prepend-deprefer": {
         "title": "AS_PATH prepend deprefer: cust1 via edgeA2 prepended",
         "intent": "Prepend AS64496 twice to cust1 at edgeA2; every core must shift the cust1 exit to edgeB1, with all flows surviving.",
@@ -82,6 +94,21 @@ SCENARIOS = {
 # says so wherever it is used. A direct eBGP next-hop that is a peer IP
 # for a watched *customer* prefix is an announcement from the wrong source.
 PEER_IPS = {"198.51.100.2", "198.51.100.10", "198.51.100.22"}  # peer1, peer2, transit1
+# Fictional ROA table (recorded replay (mock) = a canned report played back
+# without a live server, explained once here and called "recorded replay"
+# in new user-facing text). Loaded from roas.json when present.
+_ROAS_DEFAULT = {
+    "192.0.2.0/24": 64496, "198.51.100.128/25": 64497,
+    "198.51.100.192/26": 64499, "203.0.113.0/24": 64498,
+    "203.0.113.128/25": 64500,
+}
+try:
+    ROAS = {k: int(v) for k, v in json.loads((HERE / "roas.json").read_text()).items()}
+except Exception:
+    ROAS = dict(_ROAS_DEFAULT)
+PEER_IP_TO_AS = {"198.51.100.2": 64497, "198.51.100.10": 64499,
+                 "198.51.100.22": 64501, "198.51.100.6": 64498,
+                 "198.51.100.18": 64498, "198.51.100.14": 64500}
 CUSTOMER_PREFIXES = {"203.0.113.0/24", "203.0.113.128/25"}
 FATAL_DISPOSITIONS = ("DENIED", "NO_ROUTE", "DROP", "NULL_ROUTED")
 # next-hop IP -> the edge that owns that exit (loopbacks and direct eBGP IPs)
@@ -101,7 +128,7 @@ def _next_hop_ip(route_text):
     return m.group(1) if m else None
 
 
-def apply_advanced_policy(routes, flows):
+def apply_advanced_policy(routes, flows, intended_victim=None):
     """Simple policy first, then advanced extensions.
 
     E1: NULL_ROUTED is a fatal flow disposition (in addition to the simple
@@ -118,6 +145,20 @@ def apply_advanced_policy(routes, flows):
         direct next-hop IP, which is unambiguous at the edge that receives
         the announcement (its own direct next-hop is either the customer
         or the peer, never both).
+    E4: Intended blackhole -> REVIEW (not BLOCK). If the scenario declares
+        an intended victim host (/32) and EVERY fatal flow violation is a
+        flow whose destination is that victim host, and no other fatal
+        violation (route lost, non-victim flow break) exists, the drop is
+        the intended mitigation, not an outage: verdict REVIEW with a note
+        saying so. Any non-victim break keeps the verdict BLOCK. The
+        victim's /25 prefix route must stay intact — that is the
+        granularity proof: only the one host drops, not the whole prefix.
+    E5: RPKI invalid origin -> BLOCK. For a watched prefix with a ROA entry,
+        a change route that is a direct eBGP route via a peer IP whose AS
+        does not match the ROA AS is an invalid announcement and must be
+        rejected. Same documented proxy as E3 (no AS_PATH from Batfish),
+        using the direct next-hop IP -> AS mapping. A route via the ROA
+        AS (customer IP or legitimate peer for its own prefix) does not fire.
     Returns (verdict, violations, notes).
     """
     verdict, violations, notes = copilot.apply_policy(routes, flows)
@@ -150,6 +191,43 @@ def apply_advanced_policy(routes, flows):
                 % (f["start"], f["dst_ip"], f["base"])
             )
             notes = [n for n in notes if not (f["start"] in n and f["dst_ip"] in n)]
+    # E5: RPKI invalid origin (direct eBGP route, wrong origin AS for ROA).
+    for r in routes:
+        if r["prefix"] not in ROAS:
+            continue
+        ch_ip = _next_hop_ip(r["change"])
+        if (r["verdict"] in ("UNCHANGED", "NEXT-HOP CHANGED", "ROUTE ADDED")
+                and r["change"].strip().startswith("bgp ")
+                and ch_ip in PEER_IP_TO_AS
+                and PEER_IP_TO_AS[ch_ip] != ROAS[r["prefix"]]):
+            violations.append(
+                "RPKI invalid: watched prefix %s announced via peer IP %s "
+                "(AS%s), but its ROA allows AS%s only; the announcement "
+                "must be rejected. (Proxy: Batfish exposes no AS_PATH, so "
+                "the direct next-hop IP -> AS mapping is used.)"
+                % (r["prefix"], ch_ip, PEER_IP_TO_AS[ch_ip], ROAS[r["prefix"]])
+            )
+    # E4: intended blackhole -> REVIEW (only victim flows broken).
+    if violations and intended_victim:
+        import ipaddress as _ip
+        victim_net = _ip.ip_network(intended_victim)
+        fatal = []
+        for v in violations:
+            m = re.search(r"flow (\S+) -> (\S+) stops working", v)
+            if m and _ip.ip_address(m.group(2)) in victim_net:
+                fatal.append(v)
+            elif "stops working" in v or "route LOST" in v or "Hijack" in v or "RPKI" in v:
+                fatal = None
+                break
+        if fatal is not None and fatal and len(fatal) == len(violations):
+            notes.append(
+                "Intended blackhole: only the declared victim host %s "
+                "is dropped (DDoS mitigation, /32 host route); the "
+                "victim's /25 prefix route and all other watched "
+                "prefixes and flows are intact. Confirm the victim "
+                "is the intended one before applying." % intended_victim
+            )
+            return "REVIEW", [], notes
     if violations:
         return "BLOCK", violations, notes
 
@@ -184,19 +262,28 @@ def run_batfish_advanced(change_dir):
     return proc.stdout
 
 
-def run_one(name, mock=False):
+def run_one(name, mock=False, lang="ko"):
     scenario = SCENARIOS[name]
     print("== %s ==" % scenario["title"])
+    if not mock and not scenario.get("live_supported", True):
+        print("SKIP (live): %s is recorded-replay-only; "
+              "run with --mock to reproduce it." % name)
+        return None
     if mock:
         raw = (DATA_DIR / ("%s.txt" % name)).read_text(encoding="utf-8")
-        source = "mock-advanced (canned live Batfish impact report)"
+        if name == "rpki-invalid-origin":
+            source = ("recorded-replay-only (fictional ROA check; "
+                      "Batfish ROV not verifiable)")
+        else:
+            source = "mock-advanced (canned live Batfish impact report)"
     else:
         raw = run_batfish_advanced(scenario["change_dir"])
         source = "batfish-live-advanced"
     routes, flows = copilot.parse_impact(raw)
-    verdict, violations, notes = apply_advanced_policy(routes, flows)
+    verdict, violations, notes = apply_advanced_policy(
+        routes, flows, intended_victim=scenario.get("intended_victim"))
     explanation = copilot.local_explanation(
-        scenario, verdict, violations, notes, routes, flows)
+        scenario, verdict, violations, notes, routes, flows, lang)
     result = {
         "scenario": name,
         "title": scenario["title"],
@@ -209,7 +296,8 @@ def run_one(name, mock=False):
         "explanation": explanation,
         "evidence_source": source,
         "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, "
-                  "E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK)",
+                  "E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, "
+                  "E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)",
     }
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / ("%s.json" % name)).write_text(
@@ -237,12 +325,14 @@ def main():
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--mock", action="store_true",
                     help="use canned live impact reports, no Batfish needed")
+    ap.add_argument("--lang", choices=["ko", "en"], default="ko",
+                    help="explanation language: ko (default, original) or en")
     args = ap.parse_args()
     names = list(SCENARIOS) if args.all else [args.change]
     if not names:
         ap.error("give --change <name> or --all")
     for name in names:
-        run_one(name, mock=args.mock)
+        run_one(name, mock=args.mock, lang=args.lang)
         print()
     return 0
 

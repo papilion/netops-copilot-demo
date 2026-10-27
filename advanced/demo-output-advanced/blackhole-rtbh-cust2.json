@@ -1,0 +1,304 @@
+{
+  "scenario": "blackhole-rtbh-cust2",
+  "title": "DDoS blackhole (RTBH): drop only victim host 203.0.113.130/32 at edgeB1",
+  "intent": "DDoS mitigation for cust2: drop ONLY the victim host 203.0.113.130/32 at edgeB1 (border /32 Null0 route, the forwarding effect an RTBH trigger installs). A DDoS usually targets one host, so operators blackhole the /32, not the whole cust2 /25 — blackholing the whole /25 would also kill the customer's innocent hosts on the same prefix, so the /32 minimises collateral. The /25 route must stay intact and every other watched prefix and flow must stay intact, and the victim drop must be recognised as intended, not as an accidental outage.",
+  "verdict": "REVIEW",
+  "violations": [],
+  "notes": [
+    "Intended blackhole: only the declared victim host 203.0.113.130/32 is dropped (DDoS mitigation, /32 host route); the victim's /25 prefix route and all other watched prefixes and flows are intact. Confirm the victim is the intended one before applying."
+  ],
+  "routes": [
+    {
+      "node": "corea1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "corea1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea2",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "corea2",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "static via discard",
+      "change": "static via discard"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.2",
+      "change": "bgp via ip 198.51.100.2"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.6",
+      "change": "bgp via ip 198.51.100.6"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.10",
+      "change": "bgp via ip 198.51.100.10"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.18",
+      "change": "bgp via ip 198.51.100.18"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.14",
+      "change": "bgp via ip 198.51.100.14"
+    }
+  ],
+  "flows": [
+    {
+      "start": "coreA1",
+      "dst_ip": "198.51.100.130",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreA1",
+      "dst_ip": "203.0.113.10",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreA2",
+      "dst_ip": "198.51.100.200",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreB1",
+      "dst_ip": "198.51.100.200",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreB1",
+      "dst_ip": "203.0.113.130",
+      "verdict": "FLOW IMPACT",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "NULL_ROUTED"
+    },
+    {
+      "start": "coreB2",
+      "dst_ip": "203.0.113.10",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    }
+  ],
+  "explanation": "의도: DDoS mitigation for cust2: drop ONLY the victim host 203.0.113.130/32 at edgeB1 (border /32 Null0 route, the forwarding effect an RTBH trigger installs). A DDoS usually targets one host, so operators blackhole the /32, not the whole cust2 /25 — blackholing the whole /25 would also kill the customer's innocent hosts on the same prefix, so the /32 minimises collateral. The /25 route must stay intact and every other watched prefix and flow must stay intact, and the victim drop must be recognised as intended, not as an accidental outage.\n판정: 재검토 필요. 아래 변경 사항을 확인한 뒤 적용 여부를 결정하세요.\n- 참고: Intended blackhole: only the declared victim host 203.0.113.130/32 is dropped (DDoS mitigation, /32 host route); the victim's /25 prefix route and all other watched prefixes and flows are intact. Confirm the victim is the intended one before applying.\n영향 받은 prefix: 없음",
+  "evidence_source": "batfish-live-advanced",
+  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)"
+}

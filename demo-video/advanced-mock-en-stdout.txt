@@ -1,0 +1,116 @@
+== Link failure: coreA1-edgeA1 shutdown ==
+Verdict: ALLOW
+Intent: Shutdown the coreA1-edgeA1 link; traffic must reroute via coreA2 and all watched flows must survive.
+Verdict: Safe to apply (within watched scope). No watched prefix route was lost and all watched flows were preserved. The verdict covers watched items only; it does not guarantee forwarding changes outside the watched set.
+Affected prefixes: none
+
+== eBGP session down: edgeA1-peer1 neighbor shutdown ==
+Verdict: BLOCK
+Intent: Shutdown the edgeA1-peer1 eBGP session; the peer1 prefix must be lost and its flow must break, while customer prefixes stay intact.
+Verdict: Do not apply. Because of the impact below, do not apply this to production unless the impact exactly matches the intent.
+- Violation: Watched prefix 198.51.100.128/25: route LOST at corea1 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at corea2 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at coreb1 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at coreb2 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at edgea1 (was: bgp via ip 198.51.100.2)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at edgea2 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at edgeb1 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched flow coreA1 -> 198.51.100.130 stops working: DELIVERED_TO_SUBNET -> NO_ROUTE
+Affected prefixes: 198.51.100.128/25
+
+== LOCAL_PREF exit shift: cust1 via edgeB1 preferred ==
+Verdict: REVIEW
+Intent: Raise LOCAL_PREF to 200 for cust1 at edgeB1; every core must shift the cust1 exit from edgeA2 to edgeB1, with all flows surviving.
+Verdict: Review required. Check the changes below before deciding whether to apply.
+- Note: Path shift for 203.0.113.0/24 at corea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at corea2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at coreb1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at coreb2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at edgea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at edgea2: bgp via ip 198.51.100.6 -> ibgp via ip 192.0.2.7
+- Note: Exit shift for 203.0.113.0/24: edgeA2 -> edgeB1 (192.0.2.4 -> 192.0.2.7); flows survive, but the new exit must be confirmed by a human.
+Affected prefixes: 203.0.113.0/24
+
+== More-specific hijack: peer2 announces 203.0.113.0/25 via Null0 ==
+Verdict: BLOCK
+Intent: Peer2 announces a more-specific of cust1's /24; traffic to 203.0.113.10 must divert to peer2's Null0 and break. See README-advanced.md for why the exact /24 announcement was replaced: Batfish kept the legitimate best path for /24, so the classic more-specific hijack is the scenario that actually diverts traffic in this lab.
+Verdict: Do not apply. Because of the impact below, do not apply this to production unless the impact exactly matches the intent.
+- Violation: Watched flow coreA1 -> 203.0.113.10 stops working: DELIVERED_TO_SUBNET -> NULL_ROUTED (diverted to a Null0, e.g. by a more-specific hijack)
+- Violation: Watched flow coreB2 -> 203.0.113.10 stops working: DELIVERED_TO_SUBNET -> NULL_ROUTED (diverted to a Null0, e.g. by a more-specific hijack)
+Affected prefixes: none
+
+== Route reflector failure: rr1 interfaces shutdown ==
+Verdict: BLOCK
+Intent: Shutdown rr1; iBGP clients must lose reflected routes and all watched flows must break.
+Verdict: Do not apply. Because of the impact below, do not apply this to production unless the impact exactly matches the intent.
+- Violation: Watched prefix 192.0.2.0/24: route LOST at corea1 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at corea1 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.192/26: route LOST at corea1 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 203.0.113.0/24: route LOST at corea1 (was: ibgp via ip 192.0.2.4)
+- Violation: Watched prefix 203.0.113.128/25: route LOST at corea1 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 192.0.2.0/24: route LOST at corea2 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at corea2 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.192/26: route LOST at corea2 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 203.0.113.0/24: route LOST at corea2 (was: ibgp via ip 192.0.2.4)
+- Violation: Watched prefix 203.0.113.128/25: route LOST at corea2 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 192.0.2.0/24: route LOST at coreb1 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at coreb1 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.192/26: route LOST at coreb1 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 203.0.113.0/24: route LOST at coreb1 (was: ibgp via ip 192.0.2.4)
+- Violation: Watched prefix 203.0.113.128/25: route LOST at coreb1 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 192.0.2.0/24: route LOST at coreb2 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at coreb2 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.192/26: route LOST at coreb2 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 203.0.113.0/24: route LOST at coreb2 (was: ibgp via ip 192.0.2.4)
+- Violation: Watched prefix 203.0.113.128/25: route LOST at coreb2 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 198.51.100.192/26: route LOST at edgea1 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 203.0.113.0/24: route LOST at edgea1 (was: ibgp via ip 192.0.2.4)
+- Violation: Watched prefix 203.0.113.128/25: route LOST at edgea1 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 192.0.2.0/24: route LOST at edgea2 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at edgea2 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.192/26: route LOST at edgea2 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 203.0.113.128/25: route LOST at edgea2 (was: ibgp via ip 192.0.2.7)
+- Violation: Watched prefix 192.0.2.0/24: route LOST at edgeb1 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched prefix 198.51.100.128/25: route LOST at edgeb1 (was: ibgp via ip 192.0.2.3)
+- Violation: Watched flow coreA1 -> 198.51.100.130 stops working: DELIVERED_TO_SUBNET -> NO_ROUTE
+- Violation: Watched flow coreA1 -> 203.0.113.10 stops working: DELIVERED_TO_SUBNET -> NO_ROUTE
+- Violation: Watched flow coreA2 -> 198.51.100.200 stops working: DELIVERED_TO_SUBNET -> NO_ROUTE
+- Violation: Watched flow coreB1 -> 198.51.100.200 stops working: DELIVERED_TO_SUBNET -> NO_ROUTE
+- Violation: Watched flow coreB1 -> 203.0.113.130 stops working: DELIVERED_TO_SUBNET -> NO_ROUTE
+- Violation: Watched flow coreB2 -> 203.0.113.10 stops working: DELIVERED_TO_SUBNET -> NO_ROUTE
+Affected prefixes: 192.0.2.0/24, 198.51.100.128/25, 198.51.100.192/26, 203.0.113.0/24, 203.0.113.128/25
+
+== DDoS blackhole (RTBH): drop only victim host 203.0.113.130/32 at edgeB1 ==
+Verdict: REVIEW
+Intent: DDoS mitigation for cust2: drop ONLY the victim host 203.0.113.130/32 at edgeB1 (border /32 Null0 route, the forwarding effect an RTBH trigger installs). A DDoS usually targets one host, so operators blackhole the /32, not the whole cust2 /25 — blackholing the whole /25 would also kill the customer's innocent hosts on the same prefix, so the /32 minimises collateral. The /25 route must stay intact and every other watched prefix and flow must stay intact, and the victim drop must be recognised as intended, not as an accidental outage.
+Verdict: Review required. Check the changes below before deciding whether to apply.
+- Note: Intended blackhole: only the declared victim host 203.0.113.130/32 is dropped (DDoS mitigation, /32 host route); the victim's /25 prefix route and all other watched prefixes and flows are intact. Confirm the victim is the intended one before applying.
+Affected prefixes: none
+
+== RPKI invalid origin: peer2 announces cust1 203.0.113.0/24 (ROA allows AS64498 only) ==
+Verdict: BLOCK
+Intent: RPKI origin validation (recorded replay only): cust1's prefix 203.0.113.0/24 has a fictional ROA for AS64498 only. An announcement of the same prefix by peer2 (AS64499) is invalid and must be rejected (BLOCK). A legitimate announcement by AS64498 is valid and must not be blocked. Batfish does not expose a verifiable ROV state, so this scenario is recorded-replay-only — see the policy note for E5.
+Verdict: Do not apply. Because of the impact below, do not apply this to production unless the impact exactly matches the intent.
+- Violation: Hijack: watched customer prefix 203.0.113.0/24 at edgeb1 is now via peer IP 198.51.100.10 (direct eBGP next-hop, not a customer IP). AS_PATH is not exposed by Batfish's routes query, so the direct peer next-hop is used as the documented proxy.
+- Violation: RPKI invalid: watched prefix 203.0.113.0/24 announced via peer IP 198.51.100.10 (AS64499), but its ROA allows AS64498 only; the announcement must be rejected. (Proxy: Batfish exposes no AS_PATH, so the direct next-hop IP -> AS mapping is used.)
+- Note: Path shift for 203.0.113.0/24 at corea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at corea2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at coreb1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at coreb2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at edgea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at edgea2: bgp via ip 198.51.100.6 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at edgeb1: bgp via ip 198.51.100.18 -> bgp via ip 198.51.100.10
+Affected prefixes: 203.0.113.0/24
+
+== AS_PATH prepend deprefer: cust1 via edgeA2 prepended ==
+Verdict: REVIEW
+Intent: Prepend AS64496 twice to cust1 at edgeA2; every core must shift the cust1 exit to edgeB1, with all flows surviving.
+Verdict: Review required. Check the changes below before deciding whether to apply.
+- Note: Path shift for 203.0.113.0/24 at corea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at corea2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at coreb1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at coreb2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at edgea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
+- Note: Path shift for 203.0.113.0/24 at edgea2: bgp via ip 198.51.100.6 -> ibgp via ip 192.0.2.7
+- Note: Exit shift for 203.0.113.0/24: edgeA2 -> edgeB1 (192.0.2.4 -> 192.0.2.7); flows survive, but the new exit must be confirmed by a human.
+Affected prefixes: 203.0.113.0/24
