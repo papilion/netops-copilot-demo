@@ -16,6 +16,14 @@ Batfish 디지털 트윈으로 시뮬레이션하고 영향 범위·정책 위�
 "안전한 변경은 통과시키고, 망을 끊는 변경은 막고, 새로운
 공지는 사람이 확인한다"는 것을 같은 엔진·같은 정책으로 증명합니다.
 
+## 고급 버전 (대형 토폴로지, 별도 섹션)
+
+단순 데모 위에, 13개 노드·2개 지역·route reflector·OSPF area 분리·
+고객/peer/transit 다중 외부연결을 갖춘 고급 랩이 `advanced/`에 있습니다.
+링크 단절, BGP 세션 단절, LOCAL_PREF 출구 변경, more-specific hijack,
+RR 장애, AS_PATH prepend까지 6개 시나리오를 라이브 Batfish와 mock으로
+둘 다 검증했습니다. 상세는 `advanced/README-advanced.md`를 보세요.
+
 ## 구조
 
 ```

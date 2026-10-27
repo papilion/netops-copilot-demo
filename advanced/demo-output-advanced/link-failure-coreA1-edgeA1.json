@@ -1,0 +1,302 @@
+{
+  "scenario": "link-failure-coreA1-edgeA1",
+  "title": "Link failure: coreA1-edgeA1 shutdown",
+  "intent": "Shutdown the coreA1-edgeA1 link; traffic must reroute via coreA2 and all watched flows must survive.",
+  "verdict": "ALLOW",
+  "violations": [],
+  "notes": [],
+  "routes": [
+    {
+      "node": "corea1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "corea1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea2",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "corea2",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "static via discard",
+      "change": "static via discard"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.2",
+      "change": "bgp via ip 198.51.100.2"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.4"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.6",
+      "change": "bgp via ip 198.51.100.6"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.10",
+      "change": "bgp via ip 198.51.100.10"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.18",
+      "change": "bgp via ip 198.51.100.18"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.14",
+      "change": "bgp via ip 198.51.100.14"
+    }
+  ],
+  "flows": [
+    {
+      "start": "coreA1",
+      "dst_ip": "198.51.100.130",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreA1",
+      "dst_ip": "203.0.113.10",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreA2",
+      "dst_ip": "198.51.100.200",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreB1",
+      "dst_ip": "198.51.100.200",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreB1",
+      "dst_ip": "203.0.113.130",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreB2",
+      "dst_ip": "203.0.113.10",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    }
+  ],
+  "explanation": "의도: Shutdown the coreA1-edgeA1 link; traffic must reroute via coreA2 and all watched flows must survive.\n판정: 적용 가능 (감시 범위 내). 감시 대상 prefix의 경로가 사라지지 않았고, 감시 대상 flow도 모두 유지됐습니다. 판정은 감시 대상 항목 기준이며, 감시 범위 밖의 전달 경로 변화까지 보장하지 않습니다.\n영향 받은 prefix: 없음",
+  "evidence_source": "batfish-live-advanced",
+  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK)"
+}

@@ -1,0 +1,310 @@
+{
+  "scenario": "aspath-prepend-deprefer",
+  "title": "AS_PATH prepend deprefer: cust1 via edgeA2 prepended",
+  "intent": "Prepend AS64496 twice to cust1 at edgeA2; every core must shift the cust1 exit to edgeB1, with all flows surviving.",
+  "verdict": "REVIEW",
+  "violations": [],
+  "notes": [
+    "Path shift for 203.0.113.0/24 at corea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7",
+    "Path shift for 203.0.113.0/24 at corea2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7",
+    "Path shift for 203.0.113.0/24 at coreb1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7",
+    "Path shift for 203.0.113.0/24 at coreb2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7",
+    "Path shift for 203.0.113.0/24 at edgea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7",
+    "Path shift for 203.0.113.0/24 at edgea2: bgp via ip 198.51.100.6 -> ibgp via ip 192.0.2.7",
+    "Exit shift for 203.0.113.0/24: edgeA2 -> edgeB1 (192.0.2.4 -> 192.0.2.7); flows survive, but the new exit must be confirmed by a human."
+  ],
+  "routes": [
+    {
+      "node": "corea1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "NEXT-HOP CHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "corea2",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "NEXT-HOP CHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "corea2",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "NEXT-HOP CHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "NEXT-HOP CHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "coreb2",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "static via discard",
+      "change": "static via discard"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.2",
+      "change": "bgp via ip 198.51.100.2"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "NEXT-HOP CHANGED",
+      "base": "ibgp via ip 192.0.2.4",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "NEXT-HOP CHANGED",
+      "base": "bgp via ip 198.51.100.6",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgea2",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.7",
+      "change": "ibgp via ip 192.0.2.7"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "198.51.100.192/26",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.10",
+      "change": "bgp via ip 198.51.100.10"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.18",
+      "change": "bgp via ip 198.51.100.18"
+    },
+    {
+      "node": "edgeb1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.14",
+      "change": "bgp via ip 198.51.100.14"
+    }
+  ],
+  "flows": [
+    {
+      "start": "coreA1",
+      "dst_ip": "198.51.100.130",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreA1",
+      "dst_ip": "203.0.113.10",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreA2",
+      "dst_ip": "198.51.100.200",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreB1",
+      "dst_ip": "198.51.100.200",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreB1",
+      "dst_ip": "203.0.113.130",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "coreB2",
+      "dst_ip": "203.0.113.10",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    }
+  ],
+  "explanation": "의도: Prepend AS64496 twice to cust1 at edgeA2; every core must shift the cust1 exit to edgeB1, with all flows surviving.\n판정: 재검토 필요. 아래 변경 사항을 확인한 뒤 적용 여부를 결정하세요.\n- 참고: Path shift for 203.0.113.0/24 at corea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at corea2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at coreb1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at coreb2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at edgea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at edgea2: bgp via ip 198.51.100.6 -> ibgp via ip 192.0.2.7\n- 참고: Exit shift for 203.0.113.0/24: edgeA2 -> edgeB1 (192.0.2.4 -> 192.0.2.7); flows survive, but the new exit must be confirmed by a human.\n영향 받은 prefix: 203.0.113.0/24",
+  "evidence_source": "batfish-live-advanced",
+  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK)"
+}
