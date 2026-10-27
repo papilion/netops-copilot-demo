@@ -208,13 +208,15 @@ def validate_advanced(name, mode, lang="ko"):
         name, verdict, violations, notes, lang)
     proposal, proposal_source = _meta_refine(
         scenario, verdict, violations, notes, proposal, lang)
+    cli_view_control = cli_view_protected = None
     if control_routes is not None and protected_routes is not None:
-        cli_view = (copilot.render_cli(
+        cli_view_control = copilot.render_cli(
             control_routes, control_flows,
             label="Control run (announcement only, no route-map)")
-            + "\n\n" + copilot.render_cli(
-                protected_routes, protected_flows,
-                label="Protected run (announcement + edgeB1 route-map)"))
+        cli_view_protected = copilot.render_cli(
+            protected_routes, protected_flows,
+            label="Protected run (announcement + edgeB1 route-map)")
+        cli_view = cli_view_control + "\n\n" + cli_view_protected
     else:
         cli_view = copilot.render_cli(routes, flows)
     result = {
@@ -233,6 +235,8 @@ def validate_advanced(name, mode, lang="ko"):
         "proposed_next_step_source": proposal_source,
         "evidence_source": evidence_source,
         "cli_view": cli_view,
+        "cli_view_control": cli_view_control,
+        "cli_view_protected": cli_view_protected,
         "meta_configured": bool(os.environ.get("META_API_KEY", "").strip()),
         "control_routes": control_routes, "control_flows": control_flows,
         "protected_routes": protected_routes,

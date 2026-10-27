@@ -61,7 +61,10 @@ img.topo { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; }
 
 <label><span id="scenarioLabel">시나리오 / Scenario:</span>
 <select id="scenario"></select></label>
-<p id="intent"></p>
+<details id="intentBox">
+  <summary><span id="intentHeading">의도 / Intent — 자세히 보기</span></summary>
+  <p id="intent"></p>
+</details>
 
 <label><input type="radio" name="mode" value="recorded" checked> <span id="modeRecorded">Recorded replay (기록 재생 — Batfish 서버 없이 동작)</span></label>
 <label><input type="radio" name="mode" value="live"> <span id="modeLive">Live (실시간 Batfish, 포트 9996)</span></label>
@@ -72,6 +75,10 @@ img.topo { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; }
   <h2><span id="verdictHeading">판정 / Verdict:</span> <span id="verdict" class="pill"></span></h2>
   <p id="meaning"></p>
   <p><b><span id="sourceLabel">증거 출처 / Evidence source:</span></b> <span id="source"></span></p>
+  <div id="glance" style="background:#eef4ff; border:1px solid #bcd; border-radius:8px; padding:14px 16px; margin:14px 0;">
+    <b id="glanceHeading">한눈에 보기 / At a glance</b>
+    <ul id="glanceList" style="margin:8px 0 0; padding-left:20px;"></ul>
+  </div>
   <h3 id="explanationHeading">설명 / Explanation</h3>
   <p id="explanation"></p>
   <p><small id="expsource"></small></p>
@@ -85,7 +92,11 @@ img.topo { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; }
   <summary><span id="cliHeading">CLI 형태 보기 / CLI-style view</span> — <span id="cliToggleHint">자세한 증거가 필요할 때만 펼치세요</span></summary>
   <div class="note" id="cliNote">Batfish 증거를 CLI 형태로 그린 것입니다. 실제 라우터 출력이 아닙니다 — 어떤 라우터에도 접속하지 않았고, 어떤 명령어도 실행하지 않았습니다.
   Batfish evidence rendered like router output — NOT actual device output.</div>
-  <pre id="cliview"></pre>
+  <div id="cliSingle"><pre id="cliview"></pre></div>
+  <div id="cliSplit" style="display:none">
+    <details><summary id="cliControlHeading">Control run — route-map 없을 때 (차단 안 됨)</summary><pre id="cliviewControl"></pre></details>
+    <details><summary id="cliProtectedHeading">Protected run — route-map 있을 때 (차단됨)</summary><pre id="cliviewProtected"></pre></details>
+  </div>
   </details>
 </div>
 
@@ -109,6 +120,9 @@ const UI = {
     scenarioLabel: '시나리오 / Scenario:', modeRecorded: 'Recorded replay (기록 재생 — Batfish 서버 없이 동작)', modeLive: 'Live (실시간 Batfish, 포트 9996)',
     run: '검증 실행 / Run validation', running: '실행 중…',
     verdictHeading: '판정 / Verdict:', sourceLabel: '증거 출처 / Evidence source:',
+    glanceHeading: '한눈에 보기 / At a glance', intentHeading: '의도 / Intent — 자세히 보기',
+    cliControlHeading: 'Control run — route-map 없을 때 (차단 안 됨)', cliProtectedHeading: 'Protected run — route-map 있을 때 (차단됨)',
+    glanceBroken: '끊긴 것: ', glanceNone: '끊긴 것 없음 — 감시 대상이 모두 살아남았습니다.', glanceUnchanged: '변경 없음: ', glanceItems: '개 항목',
     explanationHeading: '설명 / Explanation', proposalHeading: '제안하는 다음 단계 / Proposed next step (재시뮬레이션 필요 — 판정이 아님)',
     evidenceHeading: '변경된 증거 / Changed evidence', thKind: '종류', thTarget: '대상', thVerdict: '판정', thChange: '변경 전 → 변경 후',
     cliHeading: 'CLI 형태 보기 / CLI-style view',
@@ -129,6 +143,9 @@ const UI = {
     scenarioLabel: 'Scenario:', modeRecorded: 'Recorded replay (works without a Batfish server)', modeLive: 'Live (real-time Batfish, port 9996)',
     run: 'Run validation', running: 'Running…',
     verdictHeading: 'Verdict:', sourceLabel: 'Evidence source:',
+    glanceHeading: 'At a glance', intentHeading: 'Intent — details',
+    cliControlHeading: 'Control run — without route-map (not blocked)', cliProtectedHeading: 'Protected run — with route-map (blocked)',
+    glanceBroken: 'Broken: ', glanceNone: 'Nothing broken — all watched items survived.', glanceUnchanged: 'Unchanged: ', glanceItems: ' items',
     explanationHeading: 'Explanation', proposalHeading: 'Proposed next step (re-simulate first — not the verdict)',
     evidenceHeading: 'Changed evidence', thKind: 'Kind', thTarget: 'Target', thVerdict: 'Verdict', thChange: 'Before → After',
     cliHeading: 'CLI-style view',
@@ -169,6 +186,10 @@ function applyLang() {
   document.getElementById('run').textContent = t.run;
   document.getElementById('verdictHeading').textContent = t.verdictHeading;
   document.getElementById('sourceLabel').textContent = t.sourceLabel;
+  document.getElementById('glanceHeading').textContent = t.glanceHeading;
+  document.getElementById('intentHeading').textContent = t.intentHeading;
+  document.getElementById('cliControlHeading').textContent = t.cliControlHeading;
+  document.getElementById('cliProtectedHeading').textContent = t.cliProtectedHeading;
   document.getElementById('explanationHeading').textContent = t.explanationHeading;
   document.getElementById('proposalHeading').textContent = t.proposalHeading;
   document.getElementById('evidenceHeading').textContent = t.evidenceHeading;
@@ -239,6 +260,24 @@ document.getElementById('run').addEventListener('click', async () => {
     v.textContent = data.verdict; v.className = 'pill ' + data.verdict;
     document.getElementById('meaning').textContent = t.meaning[data.verdict] || data.verdict_meaning;
     document.getElementById('source').textContent = data.evidence_source;
+    const glance = document.getElementById('glanceList');
+    glance.innerHTML = '';
+    const broken = [...data.changed_routes.map(x => x.node + ' ' + x.prefix), ...data.changed_flows.map(x => x.start + ' → ' + x.dst_ip)];
+    const li1 = document.createElement('li');
+    li1.textContent = broken.length ? t.glanceBroken + broken.join(', ') : t.glanceNone;
+    glance.appendChild(li1);
+    const li2 = document.createElement('li');
+    li2.textContent = t.glanceUnchanged + data.unchanged_count + t.glanceItems;
+    glance.appendChild(li2);
+    if (data.cli_view_control && data.cli_view_protected) {
+      const li3 = document.createElement('li');
+      const ctrlBroken = (data.control_flows || []).filter(x => x.verdict !== 'UNCHANGED').length;
+      const protBroken = (data.protected_flows || []).filter(x => x.verdict !== 'UNCHANGED').length;
+      li3.textContent = uiLang === 'ko'
+        ? 'Control run: ' + ctrlBroken + '개 끊김 / Protected run: ' + protBroken + '개 끊김 — route-map이 무효 발표를 막았는지 이 두 줄로 확인하세요.'
+        : 'Control run: ' + ctrlBroken + ' broken / Protected run: ' + protBroken + ' broken — this shows whether the route-map blocked the invalid announcement.';
+      glance.appendChild(li3);
+    }
     document.getElementById('explanation').textContent = data.explanation;
     document.getElementById('expsource').textContent = t.sourcePrefix + data.explanation_source +
       (data.meta_configured ? '' : t.metaNote);
@@ -257,7 +296,16 @@ document.getElementById('run').addEventListener('click', async () => {
       tr.innerHTML = '<td>' + t.flow + '</td><td>' + x.start + ' → ' + x.dst_ip + '</td><td>' + x.verdict + '</td><td>' + x.base + ' → ' + x.change + '</td>';
       tbody.appendChild(tr);
     });
-    document.getElementById('cliview').textContent = data.cli_view;
+    if (data.cli_view_control && data.cli_view_protected) {
+      document.getElementById('cliSingle').style.display = 'none';
+      document.getElementById('cliSplit').style.display = 'block';
+      document.getElementById('cliviewControl').textContent = data.cli_view_control;
+      document.getElementById('cliviewProtected').textContent = data.cli_view_protected;
+    } else {
+      document.getElementById('cliSingle').style.display = 'block';
+      document.getElementById('cliSplit').style.display = 'none';
+      document.getElementById('cliview').textContent = data.cli_view;
+    }
     res.style.display = 'block';
   } catch (e) {
     err.style.display = 'block'; err.textContent = t.requestFailed + e;
