@@ -26,10 +26,13 @@ elif command -v docker >/dev/null 2>&1; then
     docker run -d --name batfish -p 9996:9996 batfish/allinone >/dev/null 2>&1 || true
   fi
   echo "Batfish: container started, warming up (first parse takes a while)..."
-  for _ in $(seq 1 100); do
+  for i in $(seq 1 100); do
     if batfish_ready; then
       echo "Batfish: READY on port 9996."
       break
+    fi
+    if [ $((i % 10)) -eq 0 ]; then
+      echo "Batfish: still warming up (attempt $i/100, ~$((i * 3))s elapsed)..."
     fi
     sleep 3
   done
