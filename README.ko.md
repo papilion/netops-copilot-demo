@@ -55,6 +55,8 @@ python3 copilot.py --all   # mock-only 시나리오는 건너뜁니다
 사용량이 있으면 리포트에 `usage`와 `cost_usd_estimate`도 기록됩니다.
 
 키가 없으면 건너뛴다고 명확히 출력하고 로컬 템플릿을 씁니다.
+
+구조 규칙: 판정(ALLOW / BLOCK / REVIEW)은 Batfish 증거가 고정된 규칙으로 내리고, Meta 모델은 판정을 내리지 않습니다. 모델은 판정을 평문으로 설명하고 다음 단계를 제안할 뿐입니다 (예: 블랙홀을 /25가 아니라 /32로 유지). 그 제안은 믿기 전에 다시 시뮬레이션해야 합니다. 각 리포트에는 "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다)"로 들어 있습니다. 라이브 API 설명은 아직 키를 기다리고 있어 현재 리포트는 규칙 기반이고, Meta 모델이 쓴 유일한 예시는 `demo-output/playground-samples.md`의 playground 샘플입니다.
 키 값은 절대 파일에 넣지 마세요 (환경변수만).
 
 MCP 서버도 있습니다 (stdlib만, JSON-RPC over stdio):

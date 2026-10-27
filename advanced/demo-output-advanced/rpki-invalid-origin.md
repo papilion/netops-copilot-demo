@@ -15,6 +15,10 @@
 - 참고: Path shift for 203.0.113.0/24 at edgeb1: bgp via ip 198.51.100.18 -> bgp via ip 198.51.100.10
 영향 받은 prefix: 203.0.113.0/24
 
+## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
+
+AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): peer2의 유효하지 않은 발표를 거부하고, AS64498만 203.0.113.0/24를 발표할 수 있도록 ROA를 수정하세요. 그다음 정당한 AS64498 발표를 다시 시뮬레이션해서 ALLOW인지 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+
 ## Evidence (Batfish, recorded-replay-only (fictional ROA check; Batfish ROV not verifiable))
 
 - corea1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)

@@ -80,6 +80,12 @@ def main():
             "We watch 5 prefixes and 6 journeys, including cross-region ones.",
             "8 tests now: the 6 above, plus a /32 blackhole and an RPKI check.",
         ]), 10),
+        (slide("What does the AI do?", [
+            "It NEVER decides the verdict. Batfish evidence does.",
+            "It explains the verdict in plain words.",
+            "It suggests a better change — then we simulate that too.",
+            "Example: blackhole at /32, not the whole /25.",
+        ]), 12),
     ]
     # All 8 advanced scenarios, highlights, in scenario order:
     # link, session, localpref, hijack, rr, blackhole, rpki, prepend.

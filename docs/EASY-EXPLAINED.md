@@ -360,6 +360,51 @@ is made. Like the hijack rule, it uses the direct peer
 next-hop IP as a proxy, because Batfish's routes query
 exposes no AS_PATH.
 
+## What does the AI do? It explains and suggests — it never decides
+
+This is the architecture rule, and it never changes: **Batfish
+evidence decides the verdict** (ALLOW / BLOCK / REVIEW) by fixed
+rules. **The Meta model never decides the verdict.** The model does
+exactly two things, and only two things:
+
+1. **Explain the verdict in plain language**, from the evidence
+   JSON (which routes changed, which flows broke). It rewords the
+   evidence; it cannot invent a route or overturn a verdict.
+2. **Propose a next step or optimisation**, which is then
+   re-simulated before anyone trusts it. The proposal is a
+   suggestion, not a decision.
+
+Every report carries the proposal in its own field, labelled
+"AI explanation / proposed next step (to be re-simulated — NOT
+the verdict)". Examples, by verdict:
+
+- 🟢 ALLOW → explain why it is safe (no watched route lost, no
+  watched flow broke) and what changed, if anything.
+- 🔴 BLOCK → propose a concrete alternative: remove the blocking
+  filter, restore the session, adjust LOCAL_PREF or prepend
+  instead of dropping traffic, or for a hijack reject the invalid
+  announcement.
+- 🟡 REVIEW → ask the human to confirm the intent and state the
+  risk (is the new exit intended, and can it handle the traffic?).
+- Blackhole (the optimisation example) → keep the drop at the
+  /32 host instead of widening it to the whole /25, to minimise
+  collateral. That is the AI's job here: not "drop or not"
+  (Batfish already answered that), but "drop less, more
+  precisely".
+- RPKI → reject the invalid origin and fix the ROA so only the
+  legitimate AS may announce the prefix.
+
+*Honest status, read this:* the live Meta API run is still
+pending a key, so the explanations and proposals in the current
+reports are rule-based (written by code, not by the model) and
+Meta-prompt-ready — the code path that calls the API when a key
+is set is built and tested for fallback, but no live API
+explanation has been produced yet. The only Meta-model-written
+examples so far are the playground samples in
+`demo-output/playground-samples.md` (the user ran those prompts
+in the dev.meta.ai playground, and they are labelled as such).
+Do not read any current report as a live API explanation.
+
 ## 6. Reproduce it in 30 seconds, and what the verdict does NOT guarantee
 
 ```bash

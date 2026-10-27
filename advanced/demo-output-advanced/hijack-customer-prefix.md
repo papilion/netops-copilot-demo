@@ -8,6 +8,10 @@
 - 위반: Watched flow coreB2 -> 203.0.113.10 stops working: DELIVERED_TO_SUBNET -> NULL_ROUTED (diverted to a Null0, e.g. by a more-specific hijack)
 영향 받은 prefix: 없음
 
+## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
+
+AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): cust1 트래픽을 막다른 길로 빼앗는 more-specific 발표를 거부하고, 정당한 cust1 경로를 복원하세요. 고객 prefix를 peer를 통해 받아들이면 안 됩니다. 그다음 다시 시뮬레이션해서 cust1 flow가 다시 전달되는지 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+
 ## Evidence (Batfish, batfish-live-advanced)
 
 - corea1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)

@@ -306,6 +306,8 @@
     }
   ],
   "explanation": "의도: Shutdown the edgeA1-peer1 eBGP session; the peer1 prefix must be lost and its flow must break, while customer prefixes stay intact.\n판정: 적용 중단. 아래 영향이 확인됐기 때문에, 의도가 정확히 이 영향과 일치하지 않는 한 운영망에 적용하면 안 됩니다.\n- 위반: Watched prefix 198.51.100.128/25: route LOST at corea1 (was: ibgp via ip 192.0.2.3)\n- 위반: Watched prefix 198.51.100.128/25: route LOST at corea2 (was: ibgp via ip 192.0.2.3)\n- 위반: Watched prefix 198.51.100.128/25: route LOST at coreb1 (was: ibgp via ip 192.0.2.3)\n- 위반: Watched prefix 198.51.100.128/25: route LOST at coreb2 (was: ibgp via ip 192.0.2.3)\n- 위반: Watched prefix 198.51.100.128/25: route LOST at edgea1 (was: bgp via ip 198.51.100.2)\n- 위반: Watched prefix 198.51.100.128/25: route LOST at edgea2 (was: ibgp via ip 192.0.2.3)\n- 위반: Watched prefix 198.51.100.128/25: route LOST at edgeb1 (was: ibgp via ip 192.0.2.3)\n- 위반: Watched flow coreA1 -> 198.51.100.130 stops working: DELIVERED_TO_SUBNET -> NO_ROUTE\n영향 받은 prefix: 198.51.100.128/25",
+  "proposed_next_step": "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 경로를 사라지게 한 변경을 제거하거나 수정하세요 (예: 차단 필터 제거, 세션 복원). 다른 것을 적용하기 전에 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.",
+  "proposed_next_step_source": "rule-based (no API call)",
   "evidence_source": "batfish-live-advanced",
-  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK)"
+  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)"
 }

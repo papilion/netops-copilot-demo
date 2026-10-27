@@ -6,6 +6,10 @@
 판정: 적용 가능 (감시 범위 내). 감시 대상 prefix의 경로가 사라지지 않았고, 감시 대상 flow도 모두 유지됐습니다. 판정은 감시 대상 항목 기준이며, 감시 범위 밖의 전달 경로 변화까지 보장하지 않습니다.
 영향 받은 prefix: 없음
 
+## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
+
+AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 감시 대상 경로가 사라지지 않았고 감시 대상 flow도 깨지지 않았으므로, 감시 범위 내에서는 안전한 변경입니다. 제안대로 적용한 뒤, 적용 후 다시 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+
 ## Evidence (Batfish)
 
 - core1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)

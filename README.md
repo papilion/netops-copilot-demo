@@ -62,6 +62,8 @@ If `META_API_KEY` is set, explanations are made by the Meta Model API (`muse-spa
 When usage is returned, the report also records `usage` and `cost_usd_estimate`.
 
 Without a key, the tool prints clearly that it is skipped and uses the local template.
+
+Architecture rule: Batfish evidence decides the verdict (ALLOW / BLOCK / REVIEW) by fixed rules; the Meta model never decides it. The model only explains the verdict in plain language and proposes a next step (for example, keep a blackhole at /32 instead of /25), which must be re-simulated before anyone trusts it. Each report carries the proposal as "AI explanation / proposed next step (to be re-simulated — NOT the verdict)". Live API explanations are still pending a key; current reports are rule-based, and the only Meta-model-written examples are the playground samples in `demo-output/playground-samples.md`.
 Never put a key value in a file (environment variable only).
 
 There is also an MCP server (stdlib only, JSON-RPC over stdio):

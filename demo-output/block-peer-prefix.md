@@ -10,6 +10,10 @@
 - 위반: Watched flow core1 -> 198.51.100.130 stops working: DELIVERED_TO_SUBNET -> NO_ROUTE
 영향 받은 prefix: 198.51.100.128/25
 
+## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
+
+AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 경로를 사라지게 한 변경을 제거하거나 수정하세요 (예: 차단 필터 제거, 세션 복원). 다른 것을 적용하기 전에 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+
 ## Evidence (Batfish)
 
 - core1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)

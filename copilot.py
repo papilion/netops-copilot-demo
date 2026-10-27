@@ -131,8 +131,13 @@ def run_mock(name):
     return mock_file.read_text(encoding="utf-8")
 
 
-def build_meta_prompt(scenario, verdict, violations, notes):
-    """Build the Meta Model API prompt from Batfish evidence only."""
+def build_meta_prompt(scenario, verdict, violations, notes, lang="ko"):
+    """Build the Meta Model API prompt from Batfish evidence only.
+
+    lang="ko" (default, backward compatible) asks for a Korean briefing;
+    lang="en" asks for an English briefing. The verdict and evidence are
+    identical in both languages; only the explanation language changes.
+    """
     evidence = {
         "change": scenario["title"],
         "intent": scenario["intent"],
@@ -140,14 +145,123 @@ def build_meta_prompt(scenario, verdict, violations, notes):
         "violations": violations,
         "notes": notes,
     }
+    lang_word = "Korean" if lang == "ko" else "English"
     return (
         "You are a network operations assistant. Rewrite the following "
         "Batfish simulation result as a short plain-language briefing "
-        "for a network engineer (max 5 sentences, Korean). Do NOT invent "
+        "for a network engineer (max 5 sentences, %s). Do NOT invent "
         "routes, prefixes, or flows beyond the evidence. Keep the verdict "
         "exactly as given.\n\nEvidence (JSON):\n%s"
-        % json.dumps(evidence, ensure_ascii=False)
+        % (lang_word, json.dumps(evidence, ensure_ascii=False))
     )
+
+
+def build_meta_proposal_prompt(scenario, verdict, violations, notes, proposal,
+                               lang="ko"):
+    """Prompt asking the model to REFINE a rule-based proposal, never to
+    decide the verdict. The verdict and evidence are fixed inputs; the
+    model only rewords the proposal in plain language (max 3 sentences).
+    Used only when META_API_KEY is set; without a key the rule-based
+    proposal from propose_next_step() is used as-is."""
+    lang_word = "Korean" if lang == "ko" else "English"
+    evidence = {
+        "change": scenario["title"],
+        "intent": scenario["intent"],
+        "verdict_from_batfish": verdict,
+        "violations": violations,
+        "notes": notes,
+        "rule_based_proposal": proposal,
+    }
+    return (
+        "You are a network operations assistant. Rewrite the rule-based "
+        "proposal below as a short plain-language suggestion for a network "
+        "engineer (max 3 sentences, %s). Do NOT change the verdict, do NOT "
+        "invent routes, prefixes, or flows beyond the evidence, and keep "
+        "the warning that the proposal must be simulated before trusting "
+        "it.\n\nEvidence (JSON):\n%s"
+        % (lang_word, json.dumps(evidence, ensure_ascii=False))
+    )
+
+
+def propose_next_step(verdict, violations, notes, lang="ko"):
+    """Rule-based proposal for the NEXT step — deterministic, no model call.
+
+    Architecture rule: this proposal NEVER decides the verdict. The
+    verdict comes from Batfish evidence only (apply_policy). This helper
+    only suggests what to try next, and every proposal must be
+    re-simulated before anyone trusts it. It exists even without a
+    META_API_KEY; when a key is set, copilot.run_one may ask the Meta
+    model to reword it (build_meta_proposal_prompt), falling back to
+    this text on any failure.
+    """
+    joined = " ".join(violations) + " " + " ".join(notes)
+    if lang == "en":
+        head = ("AI explanation / proposed next step (to be re-simulated "
+                "— NOT the verdict): ")
+        tail = (" Simulate this proposal too, before trusting it.")
+        if verdict == "ALLOW":
+            body = ("No watched route was lost and no watched flow broke, "
+                    "so this change is safe within the watched scope. "
+                    "Apply it as proposed, then re-check after applying.")
+        elif verdict == "BLOCK":
+            if "RPKI" in joined:
+                body = ("Reject the invalid announcement and check or fix "
+                        "the ROA so only the legitimate AS may announce "
+                        "the prefix. Then re-simulate the legitimate "
+                        "announcement and confirm it is ALLOW.")
+            elif "Hijack" in joined:
+                body = ("Reject the announcement from the peer — do not "
+                        "accept a customer prefix via a peer next-hop — "
+                        "and confirm the legitimate customer path. Then "
+                        "re-simulate.")
+            elif "route LOST" in joined:
+                body = ("Remove or fix the change that lost the route "
+                        "(for example, remove the blocking filter or "
+                        "restore the session) and re-simulate before "
+                        "applying anything else.")
+            else:
+                body = ("Instead of dropping traffic, move it with "
+                        "LOCAL_PREF or AS_PATH prepend — traffic "
+                        "engineering that keeps flows alive — and "
+                        "re-simulate that alternative.")
+        else:  # REVIEW
+            body = ("Ask a human to confirm the intent first: is the new "
+                    "route or exit exactly what was intended, and can "
+                    "the new exit handle the traffic (capacity and "
+                    "latency)? Only apply after confirmation, then "
+                    "re-simulate.")
+        return head + body + tail
+    head = ("AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 "
+            "아닙니다): ")
+    tail = " 이 제안도 믿기 전에 시뮬레이션하세요."
+    if verdict == "ALLOW":
+        body = ("감시 대상 경로가 사라지지 않았고 감시 대상 flow도 "
+                "깨지지 않았으므로, 감시 범위 내에서는 안전한 변경입니다. "
+                "제안대로 적용한 뒤, 적용 후 다시 확인하세요.")
+    elif verdict == "BLOCK":
+        if "RPKI" in joined:
+            body = ("유효하지 않은 발표를 거부하고, 정당한 AS만 해당 "
+                    "prefix를 발표할 수 있도록 ROA를 확인하거나 "
+                    "수정하세요. 그다음 정당한 발표를 다시 시뮬레이션해서 "
+                    "ALLOW인지 확인하세요.")
+        elif "Hijack" in joined:
+            body = ("peer를 통한 발표는 거부하세요. 고객 prefix를 peer "
+                    "next-hop으로 받아들이면 안 됩니다. 정당한 고객 "
+                    "경로를 확인한 뒤 다시 시뮬레이션하세요.")
+        elif "route LOST" in joined:
+            body = ("경로를 사라지게 한 변경을 제거하거나 수정하세요 "
+                    "(예: 차단 필터 제거, 세션 복원). 다른 것을 적용하기 "
+                    "전에 다시 시뮬레이션하세요.")
+        else:
+            body = ("트래픽을 끊는 대신 LOCAL_PREF나 AS_PATH prepend로 "
+                    "옮기세요. flow를 살리는 트래픽 엔지니어링입니다. "
+                    "그 대안을 다시 시뮬레이션하세요.")
+    else:  # REVIEW
+        body = ("먼저 사람이 의도를 확인하세요. 새 경로 또는 출구가 "
+                "정말 의도한 것이 맞는지, 새 출구가 트래픽을 감당할 수 "
+                "있는지(용량과 지연) 확인하세요. 확인한 뒤에만 적용하고, "
+                "다시 시뮬레이션하세요.")
+    return head + body + tail
 
 
 def parse_meta_response(data):
@@ -248,10 +362,43 @@ def apply_policy(routes, flows):
     return verdict, violations, notes
 
 
-def local_explanation(scenario, verdict, violations, notes, routes, flows):
-    """Deterministic explanation from evidence only (no model call)."""
+def local_explanation(scenario, verdict, violations, notes, routes, flows,
+                      lang="ko"):
+    """Deterministic explanation from evidence only (no model call).
+
+    lang="ko" (default, backward compatible) produces the original Korean
+    text; lang="en" produces the same content in English. Verdicts,
+    violations, notes and affected prefixes are identical in both.
+    """
     affected = sorted({r["prefix"] for r in routes if r["verdict"] != "UNCHANGED"})
     lines = []
+    if lang == "en":
+        lines.append("Intent: %s" % scenario["intent"])
+        if verdict == "ALLOW":
+            lines.append(
+                "Verdict: Safe to apply (within watched scope). No watched "
+                "prefix route was lost and all watched flows were preserved. "
+                "The verdict covers watched items only; it does not guarantee "
+                "forwarding changes outside the watched set."
+            )
+        elif verdict == "BLOCK":
+            lines.append(
+                "Verdict: Do not apply. Because of the impact below, do not "
+                "apply this to production unless the impact exactly matches "
+                "the intent."
+            )
+        else:
+            lines.append("Verdict: Review required. Check the changes below "
+                         "before deciding whether to apply.")
+        for v in violations:
+            lines.append("- Violation: %s" % v)
+        for n in notes:
+            lines.append("- Note: %s" % n)
+        if affected:
+            lines.append("Affected prefixes: %s" % ", ".join(affected))
+        else:
+            lines.append("Affected prefixes: none")
+        return "\n".join(lines)
     lines.append("의도: %s" % scenario["intent"])
     if verdict == "ALLOW":
         lines.append(
@@ -278,17 +425,23 @@ def local_explanation(scenario, verdict, violations, notes, routes, flows):
     return "\n".join(lines)
 
 
-def meta_explanation(api_key, model, scenario, verdict, violations, notes):
+def meta_explanation(api_key, model, scenario, verdict, violations, notes,
+                     lang="ko", prompt_fn=None, proposal=None):
     """Ask Meta Model API to rewrite the explanation from the same evidence.
 
     Returns (text_or_None, usage_or_None, cost_or_None). On any failure
     the caller falls back to the local explanation — the verdict itself
-    never depends on this call.
+    never depends on this call. With prompt_fn=build_meta_proposal_prompt
+    and proposal set, it instead refines a rule-based proposal (the
+    verdict still comes from Batfish, never from the model).
     """
+    if prompt_fn is None:
+        prompt = build_meta_prompt(scenario, verdict, violations, notes, lang)
+    else:
+        prompt = prompt_fn(scenario, verdict, violations, notes, proposal, lang)
     body = json.dumps({
         "model": model,
-        "messages": [{"role": "user",
-                      "content": build_meta_prompt(scenario, verdict, violations, notes)}],
+        "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.2,
         "max_tokens": 400,
     }).encode()
@@ -310,7 +463,7 @@ def meta_explanation(api_key, model, scenario, verdict, violations, notes):
         return None, None, None
 
 
-def run_one(name, mock=False):
+def run_one(name, mock=False, lang="ko"):
     scenario = SCENARIOS[name]
     print("== %s ==" % scenario["title"])
     if mock:
@@ -324,7 +477,8 @@ def run_one(name, mock=False):
         evidence_source = "batfish-live"
     routes, flows = parse_impact(raw)
     verdict, violations, notes = apply_policy(routes, flows)
-    explanation = local_explanation(scenario, verdict, violations, notes, routes, flows)
+    explanation = local_explanation(scenario, verdict, violations, notes,
+                                    routes, flows, lang)
     source = "local-template (no API call, no credit used)"
 
     # Meta API is the primary explanation path whenever a key is set;
@@ -335,20 +489,44 @@ def run_one(name, mock=False):
     usage, cost, api_note = None, None, None
     if api_key:
         model_text, usage, cost = meta_explanation(
-            api_key, model, scenario, verdict, violations, notes)
+            api_key, model, scenario, verdict, violations, notes, lang)
         if model_text:
-            explanation = model_text + "\n[설명 출처: Meta Model API, 판정은 Batfish 증거 기준]"
+            if lang == "en":
+                explanation = (model_text + "\n[Explanation source: Meta Model "
+                               "API, verdict is based on Batfish evidence]")
+            else:
+                explanation = model_text + "\n[설명 출처: Meta Model API, 판정은 Batfish 증거 기준]"
             source = "Meta Model API (%s)" % model
         else:
             api_note = "Meta Model API call failed; fell back to local template."
     else:
         model = None
-        api_note = ("Meta Model API explanation skipped: META_API_KEY is not "
-                    "set, so the local template is used. Set META_API_KEY "
-                    "(env var only, never in files) to get a Muse Spark 1.3 "
-                    "explanation. A recorded API-style sample is in "
-                    "demo-output/playground-samples.md.")
+        if lang == "en":
+            api_note = ("Meta Model API explanation skipped: META_API_KEY is not "
+                        "set, so the local template is used. Set META_API_KEY "
+                        "(env var only, never in files) to get a Muse Spark 1.3 "
+                        "explanation. A recorded API-style sample is in "
+                        "demo-output/playground-samples.md.")
+        else:
+            api_note = ("Meta Model API explanation skipped: META_API_KEY is not "
+                        "set, so the local template is used. Set META_API_KEY "
+                        "(env var only, never in files) to get a Muse Spark 1.3 "
+                        "explanation. A recorded API-style sample is in "
+                        "demo-output/playground-samples.md.")
         print(api_note, file=sys.stderr)
+
+    # Proposed next step: rule-based by default; when a key is set, the
+    # model may reword it, but the verdict never comes from the model.
+    # The proposal is a suggestion only — it must be re-simulated.
+    proposal = propose_next_step(verdict, violations, notes, lang)
+    proposal_source = "rule-based (no API call)"
+    if api_key:
+        refined, _, _ = meta_explanation(
+            api_key, model, scenario, verdict, violations, notes, lang,
+            prompt_fn=build_meta_proposal_prompt, proposal=proposal)
+        if refined:
+            proposal = refined
+            proposal_source = "Meta Model API (refined from rule-based proposal)"
 
     result = {
         "scenario": name,
@@ -360,6 +538,8 @@ def run_one(name, mock=False):
         "routes": routes,
         "flows": flows,
         "explanation": explanation,
+        "proposed_next_step": proposal,
+        "proposed_next_step_source": proposal_source,
         "explanation_source": source,
         "model": model,
         "usage": usage,
@@ -378,6 +558,11 @@ def run_one(name, mock=False):
     report.append("**Verdict: %s**" % verdict)
     report.append("")
     report.append(explanation)
+    report.append("")
+    report.append("## AI explanation / proposed next step "
+                  "(to be re-simulated — NOT the verdict)")
+    report.append("")
+    report.append(proposal)
     report.append("")
     report.append("## Evidence (Batfish)")
     report.append("")
@@ -409,6 +594,8 @@ def main():
     ap.add_argument("--mock", action="store_true",
                     help="use canned Batfish impact reports in demo-data/ "
                          "(no Batfish server, Java or venv needed)")
+    ap.add_argument("--lang", choices=["ko", "en"], default="ko",
+                    help="explanation language: ko (default, original) or en")
     args = ap.parse_args()
     names = list(SCENARIOS) if args.all else [args.change]
     if not names:
@@ -419,7 +606,7 @@ def main():
         for n in skipped:
             print("Skipping %s in live mode (mock-only scenario)." % n)
     for name in names:
-        run_one(name, mock=args.mock)
+        run_one(name, mock=args.mock, lang=args.lang)
         print()
     return 0
 

@@ -249,6 +249,76 @@ def apply_advanced_policy(routes, flows, intended_victim=None):
     return verdict, violations, notes
 
 
+def propose_next_step_advanced(name, verdict, violations, notes, lang="ko"):
+    """Rule-based proposal for advanced scenarios (see copilot's helper
+    for the architecture rule: the proposal NEVER decides the verdict,
+    and it must be re-simulated before anyone trusts it).
+
+    Blackhole is the optimisation example: the mitigation already uses
+    a /32 host route, and the proposal is to KEEP it at /32 — never
+    widen it to the whole /25 — because that minimises collateral.
+    RPKI: reject the invalid origin and fix the ROA. Everything else
+    delegates to copilot.propose_next_step().
+    """
+    if name == "blackhole-rtbh-cust2":
+        if lang == "en":
+            return ("AI explanation / proposed next step (to be "
+                    "re-simulated — NOT the verdict): Keep the drop at "
+                    "the /32 host 203.0.113.130 only — do NOT widen it "
+                    "to the whole cust2 /25. Widening would also kill "
+                    "the customer's innocent hosts on the same prefix; "
+                    "the /32 is the optimisation that minimises "
+                    "collateral. Confirm the victim host, set an expiry "
+                    "and removal plan, then re-simulate the removal to "
+                    "prove traffic returns. Simulate this proposal too, "
+                    "before trusting it.")
+        return ("AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — "
+                "판정이 아닙니다): 차단은 /32 호스트 203.0.113.130에만 "
+                "유지하세요. cust2 /25 전체로 넓히면 안 됩니다. 넓히면 "
+                "같은 prefix의 무고한 고객 호스트까지 죽습니다. /32가 "
+                "부수 피해를 줄이는 최적화입니다. 피해자 호스트를 "
+                "확인하고, 만료와 해제 계획을 정한 뒤, 해제 후 트래픽이 "
+                "돌아오는지 다시 시뮬레이션하세요. 이 제안도 믿기 전에 "
+                "시뮬레이션하세요.")
+    if name == "hijack-customer-prefix":
+        # The live /25 hijack diverts flows to Null0; it does not appear
+        # as a "Hijack" violation row (the /25 is not a watched prefix),
+        # so the generic helper would miss it. Name-based, still
+        # rule-based, still never the verdict.
+        if lang == "en":
+            return ("AI explanation / proposed next step (to be "
+                    "re-simulated — NOT the verdict): Reject the "
+                    "more-specific announcement that diverts cust1 "
+                    "traffic to a dead end, and restore the legitimate "
+                    "cust1 path. Do not accept a customer prefix "
+                    "announced via a peer. Then re-simulate and confirm "
+                    "the cust1 flows are delivered again. Simulate this "
+                    "proposal too, before trusting it.")
+        return ("AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — "
+                "판정이 아닙니다): cust1 트래픽을 막다른 길로 빼앗는 "
+                "more-specific 발표를 거부하고, 정당한 cust1 경로를 "
+                "복원하세요. 고객 prefix를 peer를 통해 받아들이면 안 "
+                "됩니다. 그다음 다시 시뮬레이션해서 cust1 flow가 다시 "
+                "전달되는지 확인하세요. 이 제안도 믿기 전에 "
+                "시뮬레이션하세요.")
+    if name == "rpki-invalid-origin":
+        if lang == "en":
+            return ("AI explanation / proposed next step (to be "
+                    "re-simulated — NOT the verdict): Reject the invalid "
+                    "announcement from peer2 and fix the ROA so only "
+                    "AS64498 may announce 203.0.113.0/24. Then "
+                    "re-simulate the legitimate AS64498 announcement "
+                    "and confirm it is ALLOW. Simulate this proposal "
+                    "too, before trusting it.")
+        return ("AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — "
+                "판정이 아닙니다): peer2의 유효하지 않은 발표를 거부하고, "
+                "AS64498만 203.0.113.0/24를 발표할 수 있도록 ROA를 "
+                "수정하세요. 그다음 정당한 AS64498 발표를 다시 "
+                "시뮬레이션해서 ALLOW인지 확인하세요. 이 제안도 믿기 "
+                "전에 시뮬레이션하세요.")
+    return copilot.propose_next_step(verdict, violations, notes, lang)
+
+
 def run_batfish_advanced(change_dir):
     cmd = [str(ADV_VENV_PYTHON), str(ADV_VALIDATE),
            "--snapshot", str(ADV_SNAPSHOT), "--watch", str(ADV_WATCH),
@@ -284,6 +354,23 @@ def run_one(name, mock=False, lang="ko"):
         routes, flows, intended_victim=scenario.get("intended_victim"))
     explanation = copilot.local_explanation(
         scenario, verdict, violations, notes, routes, flows, lang)
+    # Proposed next step: rule-based by default (see the architecture
+    # rule in propose_next_step_advanced — it never decides the verdict).
+    # When META_API_KEY is set, the model may reword it; on any failure
+    # the rule-based text stands. A live Meta API run is still pending
+    # a key, so current reports carry the rule-based proposal.
+    proposal = propose_next_step_advanced(
+        name, verdict, violations, notes, lang)
+    proposal_source = "rule-based (no API call)"
+    _api_key = os.environ.get("META_API_KEY", "").strip()
+    if _api_key:
+        _model = os.environ.get("META_MODEL", copilot.DEFAULT_MODEL)
+        refined, _, _ = copilot.meta_explanation(
+            _api_key, _model, scenario, verdict, violations, notes, lang,
+            prompt_fn=copilot.build_meta_proposal_prompt, proposal=proposal)
+        if refined:
+            proposal = refined
+            proposal_source = "Meta Model API (refined from rule-based proposal)"
     result = {
         "scenario": name,
         "title": scenario["title"],
@@ -294,6 +381,8 @@ def run_one(name, mock=False, lang="ko"):
         "routes": routes,
         "flows": flows,
         "explanation": explanation,
+        "proposed_next_step": proposal,
+        "proposed_next_step_source": proposal_source,
         "evidence_source": source,
         "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, "
                   "E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, "
@@ -304,6 +393,9 @@ def run_one(name, mock=False, lang="ko"):
         json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     report = ["# NetOps Copilot (advanced) — %s" % scenario["title"], "",
               "**Verdict: %s**" % verdict, "", explanation, "",
+              "## AI explanation / proposed next step "
+              "(to be re-simulated — NOT the verdict)", "",
+              proposal, "",
               "## Evidence (Batfish, %s)" % source, ""]
     for r in routes:
         report.append("- %s %s: %s (base: %s -> change: %s)"

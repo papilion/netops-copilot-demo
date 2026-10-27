@@ -299,6 +299,8 @@
     }
   ],
   "explanation": "의도: DDoS mitigation for cust2: drop ONLY the victim host 203.0.113.130/32 at edgeB1 (border /32 Null0 route, the forwarding effect an RTBH trigger installs). A DDoS usually targets one host, so operators blackhole the /32, not the whole cust2 /25 — blackholing the whole /25 would also kill the customer's innocent hosts on the same prefix, so the /32 minimises collateral. The /25 route must stay intact and every other watched prefix and flow must stay intact, and the victim drop must be recognised as intended, not as an accidental outage.\n판정: 재검토 필요. 아래 변경 사항을 확인한 뒤 적용 여부를 결정하세요.\n- 참고: Intended blackhole: only the declared victim host 203.0.113.130/32 is dropped (DDoS mitigation, /32 host route); the victim's /25 prefix route and all other watched prefixes and flows are intact. Confirm the victim is the intended one before applying.\n영향 받은 prefix: 없음",
+  "proposed_next_step": "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 차단은 /32 호스트 203.0.113.130에만 유지하세요. cust2 /25 전체로 넓히면 안 됩니다. 넓히면 같은 prefix의 무고한 고객 호스트까지 죽습니다. /32가 부수 피해를 줄이는 최적화입니다. 피해자 호스트를 확인하고, 만료와 해제 계획을 정한 뒤, 해제 후 트래픽이 돌아오는지 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.",
+  "proposed_next_step_source": "rule-based (no API call)",
   "evidence_source": "batfish-live-advanced",
   "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)"
 }

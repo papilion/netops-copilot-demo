@@ -7,6 +7,10 @@
 - 참고: New route for 203.0.113.128/25 at edge1 (bgp via ip 198.51.100.6)
 영향 받은 prefix: 203.0.113.128/25
 
+## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
+
+AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 먼저 사람이 의도를 확인하세요. 새 경로 또는 출구가 정말 의도한 것이 맞는지, 새 출구가 트래픽을 감당할 수 있는지(용량과 지연) 확인하세요. 확인한 뒤에만 적용하고, 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+
 ## Evidence (Batfish)
 
 - core1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)

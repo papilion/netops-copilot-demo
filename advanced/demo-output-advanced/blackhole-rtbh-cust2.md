@@ -7,6 +7,10 @@
 - 참고: Intended blackhole: only the declared victim host 203.0.113.130/32 is dropped (DDoS mitigation, /32 host route); the victim's /25 prefix route and all other watched prefixes and flows are intact. Confirm the victim is the intended one before applying.
 영향 받은 prefix: 없음
 
+## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
+
+AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 차단은 /32 호스트 203.0.113.130에만 유지하세요. cust2 /25 전체로 넓히면 안 됩니다. 넓히면 같은 prefix의 무고한 고객 호스트까지 죽습니다. /32가 부수 피해를 줄이는 최적화입니다. 피해자 호스트를 확인하고, 만료와 해제 계획을 정한 뒤, 해제 후 트래픽이 돌아오는지 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+
 ## Evidence (Batfish, batfish-live-advanced)
 
 - corea1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)

@@ -84,6 +84,7 @@ the demo repo carries the canned reports, so a judge can reproduce every verdict
 
 ## Appendix — Details / honest notes
 
+- **AI role — the model never decides the verdict.** Batfish evidence decides ALLOW / BLOCK / REVIEW by fixed rules. The Meta model only (1) explains the verdict in plain language from the evidence JSON, and (2) proposes a next step or optimisation, which must be re-simulated before anyone trusts it. Each report carries it as "AI explanation / proposed next step (to be re-simulated — NOT the verdict)". The blackhole /32 (keep the drop on one host, never widen to the /25) is the optimisation example. Honest status: the live Meta API run is still pending a key, so current proposals are rule-based; the only Meta-model-written examples are the playground samples in the simple demo's `demo-output/playground-samples.md`.
 - **E1 — NULL_ROUTED is fatal.** A flow diverted to a Null0 counts as broken, like NO_ROUTE or DROP.
 - **E2 — Exit shift → REVIEW.** If flows survive but a prefix's exit edge changes, a human must confirm the new exit.
   A next-hop change staying on the same edge is still ALLOW.
