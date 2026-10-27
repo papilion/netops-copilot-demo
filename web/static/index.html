@@ -37,6 +37,16 @@ pre { background: #f4f4f4; padding: 14px; overflow-x: auto; white-space: pre-wra
 details summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
 footer { margin-top: 32px; font-size: 0.85em; color: #555; border-top: 1px solid #ddd; padding-top: 12px; }
 img.topo { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; }
+#topoSvg .link { stroke: #999; stroke-width: 2; }
+#topoSvg .node { fill: #fff; stroke: #333; stroke-width: 2; }
+#topoSvg .nodeLabel { font-size: 15px; font-weight: 700; text-anchor: middle; fill: #1a1a1a; }
+#topoSvg .ext { fill: #eef4ff; }
+#topoSvg .hl-link { stroke: #c0392b; stroke-width: 5; stroke-dasharray: 12 7; animation: topoDash 1s linear infinite; }
+#topoSvg .alt-link { stroke: #1a7f37; stroke-width: 5; stroke-dasharray: 12 7; animation: topoDash 1s linear infinite; }
+#topoSvg .hl-node { stroke: #c0392b; stroke-width: 4; }
+#topoSvg .hl-ring { fill: none; stroke: #c0392b; stroke-width: 3; opacity: 0.7; animation: topoPulse 1.6s ease-out infinite; }
+@keyframes topoDash { to { stroke-dashoffset: -19; } }
+@keyframes topoPulse { 0% { r: 30; opacity: 0.7; } 100% { r: 46; opacity: 0; } }
 @media (max-width: 600px) { body { font-size: 16px; padding: 14px 12px 32px; } h1 { font-size: 1.4em; } select, button { width: 100%; box-sizing: border-box; } }
 </style>
 </head>
@@ -57,7 +67,11 @@ img.topo { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; }
   <option value="simple">단순 데모 (5 nodes)</option>
   <option value="advanced">고급 랩 (13 nodes)</option>
 </select></label>
-<p><img id="topo" class="topo" src="/docs/topology-simple.png" alt="Topology diagram"></p>
+<div id="topoWrap" style="border:1px solid #ccc; border-radius:8px; padding:8px; background:#fbfbfb;">
+<svg id="topoSvg" viewBox="0 0 900 520" style="width:100%; height:auto; display:block;" role="img" aria-label="Topology diagram"></svg>
+<p id="topoCaption" style="margin:8px 4px 2px; font-size:0.95em; font-weight:600;"></p>
+<p id="topoNote" style="margin:2px 4px; font-size:0.85em; color:#555;">구성도는 실제 랩 설정의 물리 링크(description)를 바탕으로 그린 약도입니다. 빨간 점선은 테스트 대상 구간, 초록 점선은 우회/새 출구입니다. 애니메이션 점선은 테스트 구간을 가리킵니다.</p>
+</div>
 
 <label><span id="scenarioLabel">시나리오 / Scenario:</span>
 <select id="scenario"></select></label>
@@ -173,6 +187,72 @@ const KO_SCENARIO = {
   'rpki-invalid-origin': ['RPKI 무효 origin: peer2가 cust1 203.0.113.0/25 발표 (ROA: 203.0.113.0/24, AS64498, maxLength 24)', 'RPKI origin 검증, route-map 강제 적용으로 라이브 검증합니다(정직한 분리): Batfish는 ROV 상태를 계산하지 않으므로, 검증 결정은 가상의 ROA 테이블(roas.json: 203.0.113.0/24 → AS64498만, maxLength 24)에서 오고, 강제 적용은 edgeB1의 실제 인바운드 route-map이 무효 발표를 거부하는 것입니다. peer2(AS64499)가 더 구체적인 203.0.113.0/25를 발표하면 두 가지로 무효입니다. origin AS64499 ≠ ROA AS64498이고, /25가 ROA maxLength 24를 넘습니다.'],
   'aspath-prepend-deprefer': ['AS_PATH prepend 우선순위 낮추기: edgeA2 경유 cust1에 prepend', 'edgeA2에서 cust1에 AS64496을 두 번 prepend합니다. 모든 코어는 cust1 출구를 edgeB1으로 옮겨야 하고, 모든 flow가 살아남아야 합니다.']
 };
+const TOPO = {
+  simple: {
+    nodes: {core1: [300,120], core2: [600,120], edge1: [450,280], cust1: [300,430], peer1: [600,430]},
+    links: [['core1','core2'], ['core1','edge1'], ['core2','edge1'], ['edge1','cust1'], ['edge1','peer1']],
+    ext: ['cust1','peer1']
+  },
+  advanced: {
+    nodes: {rr1: [450,30], coreA1: [140,130], coreA2: [320,130], coreB1: [580,210], coreB2: [760,210], edgeA1: [140,300], edgeA2: [320,300], edgeB1: [670,360], peer1: [80,450], transit1: [200,450], cust1: [380,450], cust2: [560,450], peer2: [800,450]},
+    links: [['coreA1','coreA2'], ['coreA1','edgeA1'], ['coreA1','edgeA2'], ['coreA1','coreB1'], ['coreA1','rr1'], ['coreA2','edgeA1'], ['coreA2','edgeA2'], ['coreA2','coreB2'], ['coreB1','coreB2'], ['coreB1','edgeB1'], ['coreB1','rr1'], ['coreB2','edgeB1'], ['edgeA1','peer1'], ['edgeA1','transit1'], ['edgeA2','cust1'], ['edgeB1','peer2'], ['edgeB1','cust2'], ['edgeB1','cust1']],
+    ext: ['peer1','transit1','cust1','cust2','peer2']
+  }
+};
+const HIGHLIGHT = {
+  'ospf-cost-shift': {links: [['core1','edge1']], alt: [['core1','core2'], ['core2','edge1']], nodes: ['core1','edge1'],
+    ko: '테스트 구간: core1–edge1 링크 (비용 10→100). 우회: core1 → core2 → edge1 (초록 점선).', en: 'Test section: core1–edge1 link (cost 10→100). Reroute: core1 → core2 → edge1 (green dashed).'},
+  'block-peer-prefix': {links: [['edge1','peer1']], alt: [], nodes: ['edge1','peer1'],
+    ko: '테스트 구간: edge1에서 peer1 prefix 차단 (edge1–peer1 링크).', en: 'Test section: peer prefix blocked at edge1 (edge1–peer1 link).'},
+  'add-customer-prefix': {links: [], alt: [], nodes: ['edge1'],
+    ko: '테스트 구간: edge1에 새 고객 prefix 등장. 기존 경로는 건드리지 않습니다.', en: 'Test section: new customer prefix appears at edge1. Existing routes are untouched.'},
+  'link-failure-coreA1-edgeA1': {links: [['coreA1','edgeA1']], alt: [['coreA1','coreA2'], ['coreA2','edgeA1']], nodes: ['coreA1','edgeA1'],
+    ko: '테스트 구간: coreA1–edgeA1 링크 다운 (빨간 점선). 우회: coreA1 → coreA2 → edgeA1 (초록 점선).', en: 'Test section: coreA1–edgeA1 link down (red dashed). Reroute: coreA1 → coreA2 → edgeA1 (green dashed).'},
+  'bgp-session-down-peer1': {links: [['edgeA1','peer1']], alt: [], nodes: ['edgeA1','peer1'],
+    ko: '테스트 구간: edgeA1–peer1 eBGP 세션 다운.', en: 'Test section: edgeA1–peer1 eBGP session down.'},
+  'localpref-exit-shift': {links: [['edgeA2','cust1']], alt: [['edgeB1','cust1']], nodes: ['edgeA2','edgeB1','cust1'],
+    ko: '테스트 구간: cust1 출구가 edgeA2에서 edgeB1으로 이동 (초록 점선이 새 출구).', en: 'Test section: cust1 exit moves from edgeA2 to edgeB1 (green dashed is the new exit).'},
+  'hijack-customer-prefix': {links: [['edgeB1','peer2']], alt: [], nodes: ['peer2','edgeB1','cust1'],
+    ko: '테스트 구간: peer2가 edgeB1으로 cust1 prefix를 하이재킹 발표 (빨간 점선).', en: 'Test section: peer2 hijacks the cust1 prefix via edgeB1 (red dashed).'},
+  'rr-failure': {links: [['rr1','coreA1'], ['rr1','coreB1']], alt: [], nodes: ['rr1'],
+    ko: '테스트 구간: 라우트 리플렉터 rr1 다운 (rr1–coreA1, rr1–coreB1 링크).', en: 'Test section: route reflector rr1 down (rr1–coreA1, rr1–coreB1 links).'},
+  'blackhole-rtbh-cust2': {links: [['edgeB1','cust2']], alt: [], nodes: ['edgeB1','cust2'],
+    ko: '테스트 구간: edgeB1에서 cust2 피해 호스트(/32)만 블랙홀 차단 (edgeB1–cust2 링크).', en: 'Test section: edgeB1 blackholes only the cust2 victim host (/32) (edgeB1–cust2 link).'},
+  'rpki-invalid-origin': {links: [['edgeB1','peer2']], alt: [['edgeB1','cust1']], nodes: ['edgeB1','peer2','cust1'],
+    ko: '테스트 구간: peer2의 무효 발표가 edgeB1 route-map에서 거부됨 (빨간 점선). 정당한 cust1 경로는 edgeB1–cust1(초록 점선)로 유지됩니다.', en: 'Test section: peer2 invalid announcement rejected by the edgeB1 route-map (red dashed). The legitimate cust1 route via edgeB1–cust1 (green dashed) stays.'},
+  'aspath-prepend-deprefer': {links: [['edgeA2','cust1']], alt: [['edgeB1','cust1']], nodes: ['edgeA2','edgeB1','cust1'],
+    ko: '테스트 구간: edgeA2 경유 cust1에 prepend되어 우선순위가 낮아지고, 출구가 edgeB1으로 이동 (초록 점선).', en: 'Test section: cust1 via edgeA2 is prepended and depreferenced, so the exit moves to edgeB1 (green dashed).'}
+};
+function linkKey(a, b) { return [a, b].sort().join('|'); }
+function renderTopo() {
+  const group = document.getElementById('group').value;
+  const topo = TOPO[group];
+  const svg = document.getElementById('topoSvg');
+  const sel = document.getElementById('scenario').value;
+  const hl = HIGHLIGHT[sel] || {links: [], alt: [], nodes: []};
+  const hlLinks = new Set(hl.links.map(p => linkKey(p[0], p[1])));
+  const altLinks = new Set(hl.alt.map(p => linkKey(p[0], p[1])));
+  const hlNodes = new Set(hl.nodes);
+  let html = '';
+  topo.links.forEach(([a, b]) => {
+    const [x1, y1] = topo.nodes[a], [x2, y2] = topo.nodes[b];
+    const cls = hlLinks.has(linkKey(a, b)) ? 'hl-link' : (altLinks.has(linkKey(a, b)) ? 'alt-link' : 'link');
+    html += '<line class="' + cls + '" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"/>';
+  });
+  Object.entries(topo.nodes).forEach(([name, [x, y]]) => {
+    const isExt = topo.ext.includes(name);
+    if (hlNodes.has(name)) html += '<circle class="hl-ring" cx="' + x + '" cy="' + y + '" r="30"/>';
+    html += '<circle class="node' + (isExt ? ' ext' : '') + (hlNodes.has(name) ? ' hl-node' : '') + '" cx="' + x + '" cy="' + y + '" r="30"/>';
+    html += '<text class="nodeLabel" x="' + x + '" y="' + (y + 5) + '">' + name + '</text>';
+  });
+  svg.innerHTML = html;
+  const cap = document.getElementById('topoCaption');
+  if (cap) cap.textContent = (uiLang === 'ko' ? (hl.ko || '') : (hl.en || ''));
+  const note = document.getElementById('topoNote');
+  if (note) note.textContent = uiLang === 'ko'
+    ? '구성도는 실제 랩 설정의 물리 링크(description)를 바탕으로 그린 약도입니다. 빨간 점선은 테스트 대상 구간, 초록 점선은 우회/새 출구입니다. 애니메이션 점선은 테스트 구간을 가리킵니다.'
+    : 'This diagram is a sketch based on the physical links (descriptions) in the real lab configs. Red dashed = test section, green dashed = reroute / new exit. The animated dashed line marks the test section.';
+}
 function applyLang() {
   uiLang = document.getElementById('lang').value;
   document.documentElement.lang = uiLang;
@@ -226,12 +306,14 @@ function renderList() {
     sel.appendChild(o);
   });
   showIntent();
+  renderTopo();
 }
 function showIntent() {
   const s = scenarios.find(x => x.name === document.getElementById('scenario').value);
   if (!s) { document.getElementById('intent').textContent = ''; return; }
   const intent = (uiLang === 'ko' && KO_SCENARIO[s.name]) ? KO_SCENARIO[s.name][1] : s.intent;
   document.getElementById('intent').textContent = UI[uiLang].intentPrefix + intent;
+  renderTopo();
 }
 document.getElementById('group').addEventListener('change', renderList);
 document.getElementById('scenario').addEventListener('change', showIntent);
