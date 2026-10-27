@@ -5,21 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NetOps Copilot — Change Validation (Web)</title>
 <style>
-body { font-family: system-ui, sans-serif; max-width: 980px; margin: 0 auto; padding: 16px; line-height: 1.5; }
-h1 { font-size: 1.4em; }
-select, button { font-size: 1em; padding: 6px 10px; }
-button { cursor: pointer; }
-.pill { display: inline-block; padding: 6px 14px; border-radius: 20px; font-weight: bold; color: #fff; }
+body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 900px; margin: 0 auto; padding: 20px 18px 40px; line-height: 1.7; color: #1a1a1a; font-size: 17px; background: #fff; }
+h1 { font-size: 1.7em; line-height: 1.3; margin-bottom: 8px; }
+h2 { font-size: 1.5em; line-height: 1.3; }
+h3 { font-size: 1.15em; margin: 28px 0 8px; padding-bottom: 6px; border-bottom: 2px solid #e5e5e5; }
+p { margin: 10px 0; }
+label { display: block; margin: 14px 0; font-weight: 600; }
+label span { font-weight: 600; }
+select, button { font-size: 1em; padding: 10px 14px; border-radius: 8px; border: 1px solid #999; }
+button { cursor: pointer; background: #1a7f37; color: #fff; font-weight: 700; border: none; padding: 12px 22px; margin-top: 6px; }
+button:disabled { background: #888; }
+button:hover:not(:disabled) { background: #146c2e; }
+#run { font-size: 1.05em; }
+#intro { background: #f0f7f1; border-left: 5px solid #1a7f37; padding: 14px 16px; border-radius: 0 8px 8px 0; }
+#intent { background: #f7f7f7; padding: 12px 14px; border-radius: 8px; font-size: 0.95em; }
+#meaning { font-size: 1.1em; font-weight: 600; }
+#explanation, #proposal { background: #fafafa; border: 1px solid #ddd; border-left: 5px solid #1a7f37; padding: 14px 16px; border-radius: 0 8px 8px 0; font-size: 1.02em; }
+#proposal { border-left-color: #b58900; }
+#counts { font-weight: 700; font-size: 1.05em; }
+.pill { display: inline-block; padding: 10px 22px; border-radius: 24px; font-weight: bold; color: #fff; font-size: 1.15em; letter-spacing: 0.02em; }
 .ALLOW { background: #1a7f37; }
 .BLOCK { background: #c0392b; }
-.REVIEW { background: #b58900; }
+.REVIEW { background: #8a6d00; }
 table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-th, td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 0.9em; }
-pre { background: #f4f4f4; padding: 12px; overflow-x: auto; white-space: pre-wrap; }
-.note { background: #fff8e1; border: 1px solid #e6c200; padding: 10px; margin: 10px 0; }
-.warn { background: #fdecea; border: 1px solid #c0392b; padding: 10px; margin: 10px 0; }
-footer { margin-top: 24px; font-size: 0.85em; color: #555; }
-img.topo { max-width: 100%; border: 1px solid #ccc; }
+th { background: #222; color: #fff; }
+th, td { border: 1px solid #ccc; padding: 10px 12px; text-align: left; font-size: 0.95em; }
+tbody tr:nth-child(even) { background: #f7f7f7; }
+pre { background: #f4f4f4; padding: 14px; overflow-x: auto; white-space: pre-wrap; font-size: 0.9em; line-height: 1.6; border-radius: 8px; }
+.note { background: #fff8e1; border: 1px solid #e6c200; padding: 12px 14px; margin: 10px 0; border-radius: 8px; }
+.warn { background: #fdecea; border: 1px solid #c0392b; padding: 12px 14px; margin: 10px 0; border-radius: 8px; }
+details summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
+footer { margin-top: 32px; font-size: 0.85em; color: #555; border-top: 1px solid #ddd; padding-top: 12px; }
+img.topo { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; }
+@media (max-width: 600px) { body { font-size: 16px; padding: 14px 12px 32px; } h1 { font-size: 1.4em; } select, button { width: 100%; box-sizing: border-box; } }
 </style>
 </head>
 <body>
@@ -63,10 +81,12 @@ img.topo { max-width: 100%; border: 1px solid #ccc; }
   <h3 id="evidenceHeading">변경된 증거 / Changed evidence</h3>
   <p id="counts"></p>
   <table id="evidence"><thead><tr><th id="thKind">종류</th><th id="thTarget">대상</th><th id="thVerdict">판정</th><th id="thChange">변경 전 → 변경 후</th></tr></thead><tbody></tbody></table>
-  <h3 id="cliHeading">CLI 형태 보기 / CLI-style view</h3>
+  <details>
+  <summary><span id="cliHeading">CLI 형태 보기 / CLI-style view</span> — <span id="cliToggleHint">자세한 증거가 필요할 때만 펼치세요</span></summary>
   <div class="note" id="cliNote">Batfish 증거를 CLI 형태로 그린 것입니다. 실제 라우터 출력이 아닙니다 — 어떤 라우터에도 접속하지 않았고, 어떤 명령어도 실행하지 않았습니다.
   Batfish evidence rendered like router output — NOT actual device output.</div>
   <pre id="cliview"></pre>
+  </details>
 </div>
 
 <footer>
@@ -92,6 +112,7 @@ const UI = {
     explanationHeading: '설명 / Explanation', proposalHeading: '제안하는 다음 단계 / Proposed next step (재시뮬레이션 필요 — 판정이 아님)',
     evidenceHeading: '변경된 증거 / Changed evidence', thKind: '종류', thTarget: '대상', thVerdict: '판정', thChange: '변경 전 → 변경 후',
     cliHeading: 'CLI 형태 보기 / CLI-style view',
+    cliToggleHint: '자세한 증거가 필요할 때만 펼치세요',
     cliNote: 'Batfish 증거를 CLI 형태로 그린 것입니다. 실제 라우터 출력이 아닙니다 — 어떤 라우터에도 접속하지 않았고, 어떤 명령어도 실행하지 않았습니다. Batfish evidence rendered like router output — NOT actual device output.',
     liveHelp: 'Live 사용법: 단순 랩과 고급 랩은 Batfish 포트 9996을 공유하므로 한 번에 하나만 실행하세요. 단순: ~/workspace/batfish-lab/start-batfish.sh / 고급: ~/workspace/batfish-lab-advanced/start-batfish-advanced.sh. 이 웹 서버는 Batfish를 자동으로 시작하지 않습니다. Live 요청 시 Batfish가 없으면 오류를 보여주고, 기록 재생으로 돌리지 않습니다.',
     scopeHelp: '보안 / Scope: 이 데모 서버는 로컬 전용(127.0.0.1)이며 인증이 없습니다. 인터넷이나 공유 네트워크에 노출하지 마세요. 데모 데이터는 전부 가짜입니다 (RFC 5737, AS 64496–64501). 실제 운영 설정을 공개 데모에 붙여넣지 마세요. AI는 판정을 내리지 않습니다. 판정은 Batfish 증거로만 정해지고, 모델은 설명과 제안만 합니다.',
@@ -111,6 +132,7 @@ const UI = {
     explanationHeading: 'Explanation', proposalHeading: 'Proposed next step (re-simulate first — not the verdict)',
     evidenceHeading: 'Changed evidence', thKind: 'Kind', thTarget: 'Target', thVerdict: 'Verdict', thChange: 'Before → After',
     cliHeading: 'CLI-style view',
+    cliToggleHint: 'Expand only when you need the detailed evidence',
     cliNote: 'Batfish evidence rendered like router output — NOT actual device output. No router was connected and no command was run on a device.',
     liveHelp: 'Live usage: the simple and advanced labs share Batfish port 9996, so run only one at a time. Simple: ~/workspace/batfish-lab/start-batfish.sh / Advanced: ~/workspace/batfish-lab-advanced/start-batfish-advanced.sh. This web server never starts Batfish automatically. If Batfish is absent on a Live request, it shows an error and does not fall back to recorded replay.',
     scopeHelp: 'Scope / security: this demo server is local-only (127.0.0.1) with no authentication. Do not expose it to the internet or a shared network. All demo data is fictional (RFC 5737, AS 64496–64501). Never paste real production settings into a public demo. AI never decides the verdict: the verdict comes only from Batfish evidence, and the model only explains and proposes.',
@@ -155,6 +177,7 @@ function applyLang() {
   document.getElementById('thVerdict').textContent = t.thVerdict;
   document.getElementById('thChange').textContent = t.thChange;
   document.getElementById('cliHeading').textContent = t.cliHeading;
+  document.getElementById('cliToggleHint').textContent = t.cliToggleHint;
   document.getElementById('cliNote').textContent = t.cliNote;
   document.getElementById('liveHelp').textContent = t.liveHelp;
   document.getElementById('scopeHelp').textContent = t.scopeHelp;
