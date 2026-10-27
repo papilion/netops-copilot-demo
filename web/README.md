@@ -59,6 +59,26 @@ python3 web/app.py
 # WEB_PORT=8080 python3 web/app.py   (to change the port)
 ```
 
+## Vendor (Live only)
+
+The UI has a vendor dropdown: **Cisco IOS**, **Arista EOS**, **Juniper
+Junos**. It applies to Live only. The same topology, IPs, ASNs and
+policies are translated into each vendor's syntax under `labs/`:
+
+- Cisco: `labs/batfish-lab/`, `labs/batfish-lab-advanced/`
+- Arista: `labs/batfish-lab-arista/`, `labs/batfish-lab-advanced-arista/`
+  (EOS: `Ethernet` interfaces with `no switchport`, `! device: … (EOS-…)` header for Batfish format detection)
+- Juniper: `labs/batfish-lab-juniper/`, `labs/batfish-lab-advanced-juniper/`
+  (`set` format; Batfish silently ignores Junos `neighbor disable`, so
+  the BGP-session-down overlay omits the peer group instead)
+
+All 11 scenarios were verified live against the Cisco baseline and give
+identical verdicts in all three vendors (2026-10-28, Batfish parse
+PASSED for every file). Recorded replay uses Cisco canned reports, so a
+recorded result is always labelled vendor `cisco` regardless of the
+dropdown. For Juniper, Batfish returns node names lowercased, so the
+evidence table shows `corea1` etc.; verdicts are unaffected.
+
 ## Modes
 
 - **Recorded replay** (default): canned Batfish impact reports in

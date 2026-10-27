@@ -51,20 +51,37 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 
 
-def _resolve_lab():
+# Vendor lab folders (same topology, IPs, ASNs and policies; only the
+# config syntax differs). Cisco is the original; Arista EOS and Juniper
+# Junos variants were translated and verified to give identical Batfish
+# verdicts for all 11 scenarios (see labs/ README note in web/README.md).
+VENDORS = {
+    "cisco": "batfish-lab",
+    "arista": "batfish-lab-arista",
+    "juniper": "batfish-lab-juniper",
+}
+
+
+def _resolve_lab(vendor="cisco"):
     """Lab folder: env override, else labs/ in this repo, else legacy path.
 
     A clone (e.g. a GitHub Codespace) contains labs/batfish-lab, so live
     runs work without the old ~/workspace layout. The legacy path stays
-    as a fallback for the original development machine.
+    as a fallback for the original development machine. The env override
+    applies to Cisco only; vendor labs always come from labs/ in the repo.
     """
-    env = os.environ.get("NETOPS_SIMPLE_LAB")
-    if env:
-        return Path(env)
-    repo_lab = HERE / "labs" / "batfish-lab"
+    if vendor not in VENDORS:
+        raise ValueError("Unknown vendor: %s (cisco, arista, juniper)" % vendor)
+    if vendor == "cisco":
+        env = os.environ.get("NETOPS_SIMPLE_LAB")
+        if env:
+            return Path(env)
+    repo_lab = HERE / "labs" / VENDORS[vendor]
     if (repo_lab / "snapshot").exists():
         return repo_lab
-    return Path.home() / "workspace" / "batfish-lab"
+    if vendor == "cisco":
+        return Path.home() / "workspace" / "batfish-lab"
+    raise RuntimeError("Vendor lab not found: %s" % repo_lab)
 
 
 def _python_with_pybatfish(lab):
@@ -139,9 +156,22 @@ SCENARIOS = {
 }
 
 
-def run_batfish(change_dir):
-    """Run validate.py and return its stdout."""
-    cmd = [str(LAB_VENV_PYTHON), str(VALIDATE), "--change", str(change_dir)]
+def run_batfish(change_dir, vendor="cisco"):
+    """Run validate.py and return its stdout.
+
+    For a non-Cisco vendor the change overlay is re-based onto that
+    vendor's lab (same change name, same node filenames), so the Cisco
+    SCENARIOS table needs no per-vendor copy.
+    """
+    if vendor == "cisco":
+        validate, venv_python = VALIDATE, LAB_VENV_PYTHON
+        change = Path(change_dir)
+    else:
+        lab = _resolve_lab(vendor)
+        validate = lab / "harness" / "validate.py"
+        venv_python = _python_with_pybatfish(lab)
+        change = lab / "changes" / Path(change_dir).name
+    cmd = [str(venv_python), str(validate), "--change", str(change)]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     if proc.returncode != 0:
         raise RuntimeError(

@@ -34,6 +34,13 @@ DEMO = HERE.parent
 sys.path.insert(0, str(DEMO))
 import copilot  # noqa: E402  (reuse parse_impact, local_explanation, Meta helpers)
 
+ADV_VENDORS = {
+    "cisco": "batfish-lab-advanced",
+    "arista": "batfish-lab-advanced-arista",
+    "juniper": "batfish-lab-advanced-juniper",
+}
+
+
 def _resolve_lab(env_name, repo_name, legacy):
     """Lab folder: env override, else labs/ in this repo, else legacy path."""
     env = os.environ.get(env_name)
@@ -43,6 +50,16 @@ def _resolve_lab(env_name, repo_name, legacy):
     if (repo_lab / "snapshot").exists():
         return repo_lab
     return Path.home() / "workspace" / legacy
+
+
+def _resolve_vendor_lab(vendor):
+    """Advanced lab folder for a vendor (cisco default, as in copilot)."""
+    if vendor not in ADV_VENDORS:
+        raise ValueError("Unknown vendor: %s (cisco, arista, juniper)" % vendor)
+    repo_lab = DEMO / "labs" / ADV_VENDORS[vendor]
+    if (repo_lab / "snapshot").exists():
+        return repo_lab
+    raise RuntimeError("Vendor lab not found: %s" % repo_lab)
 
 
 ADV_LAB = _resolve_lab("NETOPS_ADV_LAB", "batfish-lab-advanced",
@@ -405,10 +422,20 @@ def propose_next_step_advanced(name, verdict, violations, notes, lang="ko"):
     return copilot.propose_next_step(verdict, violations, notes, lang)
 
 
-def run_batfish_advanced(change_dir):
-    cmd = [str(ADV_VENV_PYTHON), str(ADV_VALIDATE),
-           "--snapshot", str(ADV_SNAPSHOT), "--watch", str(ADV_WATCH),
-           "--change", str(change_dir)]
+def run_batfish_advanced(change_dir, vendor="cisco"):
+    """Run the advanced harness; vendor re-bases the overlay like copilot."""
+    if vendor == "cisco":
+        validate, snapshot, watch = ADV_VALIDATE, ADV_SNAPSHOT, ADV_WATCH
+        change = Path(change_dir)
+    else:
+        lab = _resolve_vendor_lab(vendor)
+        validate = lab / "harness" / "validate.py"
+        snapshot = lab / "snapshot"
+        watch = lab / "watch-advanced.json"
+        change = lab / "changes" / Path(change_dir).name
+    cmd = [str(ADV_VENV_PYTHON), str(validate),
+           "--snapshot", str(snapshot), "--watch", str(watch),
+           "--change", str(change)]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     if proc.returncode != 0:
         raise RuntimeError(

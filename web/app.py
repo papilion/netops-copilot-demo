@@ -112,17 +112,23 @@ def _meta_refine(scenario, verdict, violations, notes, proposal, lang="ko"):
     return proposal, "rule-based (Meta API call failed, fell back)"
 
 
-def validate_simple(name, mode, lang="ko"):
+VENDORS = ("cisco", "arista", "juniper")
+
+
+def validate_simple(name, mode, lang="ko", vendor="cisco"):
     scenario = copilot.SCENARIOS[name]
     if mode == "recorded":
+        # Canned reports are Cisco evidence; the vendor choice applies
+        # to Live only, so a recorded result is always labelled cisco.
         raw = copilot.run_mock(name)
         evidence_source = "recorded-replay (canned Batfish impact report)"
+        vendor = "cisco"
     else:
         if scenario.get("mock_only"):
             raise ValueError(
                 "Scenario %s has no live Batfish overlay; use recorded "
                 "replay for it." % name)
-        raw = copilot.run_batfish(scenario["change_dir"])
+        raw = copilot.run_batfish(scenario["change_dir"], vendor=vendor)
         evidence_source = "batfish-live"
     routes, flows = copilot.parse_impact(raw)
     verdict, violations, notes = copilot.apply_policy(routes, flows)
@@ -157,12 +163,13 @@ def validate_simple(name, mode, lang="ko"):
         "proposed_next_step": proposal,
         "proposed_next_step_source": proposal_source,
         "evidence_source": evidence_source,
+        "vendor": vendor,
         "cli_view": copilot.render_cli(routes, flows),
         "meta_configured": bool(api_key),
     }
 
 
-def validate_advanced(name, mode, lang="ko"):
+def validate_advanced(name, mode, lang="ko", vendor="cisco"):
     scenario = advanced_mod.SCENARIOS[name]
     control_routes = control_flows = None
     protected_routes = protected_flows = None
@@ -170,16 +177,19 @@ def validate_advanced(name, mode, lang="ko"):
         raw = (advanced_mod.DATA_DIR / ("%s.txt" % name)).read_text(
             encoding="utf-8")
         evidence_source = "recorded-replay (canned live Batfish report)"
+        vendor = "cisco"
     elif scenario.get("control_dir"):
         raw_control = advanced_mod.run_batfish_advanced(
-            scenario["control_dir"])
-        raw = advanced_mod.run_batfish_advanced(scenario["change_dir"])
+            scenario["control_dir"], vendor=vendor)
+        raw = advanced_mod.run_batfish_advanced(scenario["change_dir"],
+                                                vendor=vendor)
         control_routes, control_flows = copilot.parse_impact(raw_control)
         raw = (raw_control + "\n\n===== Protected run (with route-map) "
                "=====\n\n" + raw)
         evidence_source = "batfish-live-advanced"
     else:
-        raw = advanced_mod.run_batfish_advanced(scenario["change_dir"])
+        raw = advanced_mod.run_batfish_advanced(scenario["change_dir"],
+                                                vendor=vendor)
         evidence_source = "batfish-live-advanced"
     routes, flows = copilot.parse_impact(raw)
     if "===== Protected run (with route-map) =====" in raw:
@@ -234,6 +244,7 @@ def validate_advanced(name, mode, lang="ko"):
         "proposed_next_step": proposal,
         "proposed_next_step_source": proposal_source,
         "evidence_source": evidence_source,
+        "vendor": vendor,
         "cli_view": cli_view,
         "cli_view_control": cli_view_control,
         "cli_view_protected": cli_view_protected,
@@ -245,12 +256,14 @@ def validate_advanced(name, mode, lang="ko"):
     return result
 
 
-def validate(name, mode, lang="ko"):
+def validate(name, mode, lang="ko", vendor="cisco"):
     """Dispatch to the simple or advanced validator. Raises on error."""
+    if vendor not in VENDORS:
+        raise ValueError("Unknown vendor: %s" % vendor)
     if name in copilot.SCENARIOS:
-        return validate_simple(name, mode, lang)
+        return validate_simple(name, mode, lang, vendor)
     if name in advanced_mod.SCENARIOS:
-        return validate_advanced(name, mode, lang)
+        return validate_advanced(name, mode, lang, vendor)
     raise ValueError("Unknown scenario: %s" % name)
 
 
@@ -308,8 +321,12 @@ class Handler(BaseHTTPRequestHandler):
         name = body.get("scenario", "")
         mode = body.get("mode", "recorded")
         lang = body.get("lang", "ko")
+        vendor = body.get("vendor", "cisco")
         if mode not in ("live", "recorded"):
             self._json(400, {"error": "mode must be 'live' or 'recorded'"})
+            return
+        if vendor not in VENDORS:
+            self._json(400, {"error": "vendor must be cisco, arista or juniper"})
             return
         group = "simple" if name in copilot.SCENARIOS else (
             "advanced" if name in advanced_mod.SCENARIOS else None)
@@ -317,7 +334,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"error": "Unknown scenario: %s" % name})
             return
         try:
-            result = validate(name, mode, lang)
+            result = validate(name, mode, lang, vendor)
         except ValueError as exc:
             self._json(400, {"error": str(exc)})
         except Exception as exc:

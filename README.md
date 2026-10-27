@@ -80,6 +80,8 @@ Open this repo on github.com, click **Code > Codespaces > Create codespace**, wa
 
 For a full first-timer walkthrough — creation, the globe icon, restart vs. new, stop/delete, costs, region, Meta API key, and troubleshooting — see [docs/CODESPACES-GUIDE.md](docs/CODESPACES-GUIDE.md) (English) or [docs/CODESPACES-GUIDE.ko.md](docs/CODESPACES-GUIDE.ko.md) (Korean).
 
+The web UI also has a vendor dropdown (Live only): Cisco IOS, Arista EOS, Juniper Junos — the same labs translated into each vendor's syntax under `labs/`, verified to give identical verdicts for all 11 scenarios (see `web/README.md`).
+
 ## Advanced version
 
 A large lab with 13 nodes, 2 regions, and a route reflector lives in `advanced/`.
