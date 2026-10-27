@@ -2,7 +2,7 @@
 
 > **이게 뭔가요?** 단순 데모와 같은 아이디어를 현실적인 백본에서 검증한 버전입니다. 노드 13개, 지역 2개, route reflector 1대입니다.
 > **어떤 문제를 푸나요?** 단순 데모로는 링크 단절, 출구 변경, hijack, reflector 장애를 보여줄 수 없습니다.
-> **판정은?** 8개 시나리오입니다. 허용 1개, 검토 3개, 차단 4개입니다. 라이브 7개는 라이브와 기록 재생 판정이 같고, RPKI는 기록 재생 전용입니다(아래 참조).
+> **판정은?** 8개 시나리오입니다. 허용 1개, 검토 3개, 차단 4개입니다. 8개 전부 라이브이고, 라이브와 기록 재생 판정이 8개 모두 같습니다(RPKI 정직한 분리 방식은 E5 참조).
 
 기본 아이디어(먼저 시뮬레이션하고, 증거로 판정하고, 사람이 결정한다)는 [단순 README](../README.ko.md)에 있습니다.
 이 파일은 더 커진 부분만 다룹니다.
@@ -53,7 +53,7 @@ OSPF area: core와 지역 간 링크는 area 0, 지역 A edge는 area 10, 지역
 
 ## 시나리오
 
-라이브 7개는 라이브와 기록 재생 판정이 같습니다. RPKI는 라이브 실행이 없습니다(E5 참조).
+라이브 8개는 라이브와 기록 재생 판정이 같습니다. RPKI는 route-map 집행으로 라이브입니다(E5 참조).
 
 | 시나리오 | 변경 | 판정 | 결과 |
 |---|---|---|---|
@@ -63,7 +63,7 @@ OSPF area: core와 지역 간 링크는 area 0, 지역 A edge는 area 10, 지역
 | `hijack-customer-prefix` | peer2가 203.0.113.0/25를 Null0로 광고 | 🔴 BLOCK | 203.0.113.10으로 가는 flow가 DELIVERED→NULL_ROUTED로 전환 |
 | `rr-failure` | rr1 인터페이스 중단 | 🔴 BLOCK | iBGP 경로 29개 소실, flow 6개 전부 NO_ROUTE로 중단 |
 | `blackhole-rtbh-cust2` | edgeB1에서 피해자 호스트 203.0.113.130/32만 Null0로 | 🟡 REVIEW | 그 호스트의 flow만 DELIVERED→NULL_ROUTED로 바뀌고, cust2 /25 경로는 그대로, 나머지 flow 전부 유지 |
-| `rpki-invalid-origin` | peer2가 cust1 203.0.113.0/24를 발표 (ROA는 AS64498만 허용) — 기록 재생 전용 | 🔴 BLOCK | 유효하지 않은 origin은, 포워딩 표에 경로가 보여도 거부해야 합니다 |
+| `rpki-invalid-origin` | peer2가 cust1 203.0.113.0/25를 발표 (ROA: 203.0.113.0/24, AS64498, maxLength 24) — 라이브 2단 실행: 통제(route-map 없음)는 cust1 트래픽을 Null0로 빼앗고, 보호(edgeB1 route-map)는 거부합니다 | 🔴 BLOCK | 유효하지 않은 origin은 거부해야 합니다. 여기서 BLOCK은 거부라는 뜻이지 장애가 아닙니다 |
 | `aspath-prepend-deprefer` | edgeA2에서 cust1에 AS64496 ×2 prepend | 🟡 REVIEW | LOCAL_PREF와 같은 출구 이동을 다른 방식으로, flow는 유지 |
 
 ## 실행 방법
@@ -77,7 +77,7 @@ python3 advanced/advanced.py --all
 python3 -m unittest discover -s tests   # 단순 + 고급, 테스트 26개
 ```
 
-이 폴더의 파일: `advanced.py` (실행기), `roas.json` (RPKI 검사용 가상 ROA 표), `demo-data-advanced/*.txt` (라이브 impact report 원문과 기록 재생 RPKI 보고서),
+이 폴더의 파일: `advanced.py` (실행기), `roas.json` (RPKI 검사용 가상 ROA 표), `demo-data-advanced/*.txt` (라이브 impact report 원문. RPKI 파일은 통제+보호 두 라이브 실행을 모두 담고 있습니다),
 `demo-output-advanced/*.md` + `*.json` (시나리오별 1개씩, live 또는 mock이라고 정직하게 표기).
 Batfish 랩 자체는 데모 저장소 밖에 있는 `~/workspace/batfish-lab-advanced/`에 있고 GitHub에는 올리지 않습니다.
 데모 저장소에는 기록된 리포트가 들어 있어, 판정만으로 `--mock`만으로 모든 판정을 재현할 수 있습니다.
@@ -96,7 +96,7 @@ python3 advanced/advanced.py --mock --all --lang ko   # 한국어 설명 (기본
 - **E2 — 출구 변경 → REVIEW.** Flow가 살아남아도 prefix의 출구 edge가 바뀌면 사람이 새 출구를 확인해야 합니다.
   같은 edge 안에서 next-hop만 바뀌는 경우는 그대로 ALLOW입니다.
 - **E4 — 의도된 블랙홀(/32) → REVIEW.** 시나리오가 의도된 피해자 호스트를 선언하고, 치명적인 위반이 그 /32 호스트로 가는 flow뿐이면, 그 차단은 사고가 아니라 의도된 완화 조치입니다. 그래서 REVIEW입니다. 피해자 외 다른 것이 깨지면 그대로 BLOCK입니다. 왜 /32인지 쉽게 말하면, DDoS는 보통 호스트 하나를 노리기 때문에 운영자는 /32 호스트 경로를 블랙홀 처리합니다. /25 전체를 블랙홀 처리하면 같은 prefix의 무고한 고객 호스트까지 죽기 때문에, /32가 부수 피해를 줄입니다. 라이브 증거가 바로 그 정밀함입니다. 피해자 호스트 flow만 DELIVERED→NULL_ROUTED로 바뀌고, edgeB1의 cust2 /25 경로는 `bgp via ip 198.51.100.14` 그대로이며, 나머지 flow 5개도 살아남습니다.
-- **E5 — RPKI 유효하지 않은 origin → BLOCK (기록 재생 전용).** ROA가 있는 감시 prefix에 대해, ROA AS와 다른 peer IP를 통한 직접 eBGP 경로로 변경되면 그 발표는 유효하지 않으므로 거부해야 합니다. 포워딩 표에 경로가 보여도 마찬가지입니다. 그 경로 자체를 받아들이면 안 되기 때문입니다. Batfish는 검증 가능한 ROV(경로 origin 검증) 상태를 주지 않습니다. Cisco식 RPKI 서버 설정은 파싱은 됐지만 검증 상태도 영향도 없었기 때문에, 라이브 RPKI라고 주장하지 않습니다. 이 시나리오는 기록 재생(recorded replay, mock)입니다. 라이브 서버 없이 저장된 보고서를 재생하는 것으로, 여기서 한 번 풀어 쓰고 새 사용자용 문장에서는 "기록 재생"이라고 씁니다. E3와 같은 next-hop IP → AS 대리 지표를 씁니다. ROA AS를 통한 정당한 발표는 발동하지 않습니다.
+- **E5 — RPKI 유효하지 않은 origin → BLOCK (route-map 집행으로 라이브, 정직한 분리).** Batfish는 ROV(경로 origin 검증) 상태를 계산하지 않습니다. Cisco식 RPKI 서버 설정은 파싱은 됐지만 검증 상태도 영향도 없었기 때문에, Batfish가 검증했다고는 절대 주장하지 않습니다. 검증 판정은 가상 ROA 표에서 옵니다(203.0.113.0/24 → AS64498, maxLength 24). 집행은 edgeB1의 실제 inbound route-map입니다. peer2(AS64499)가 more-specific 203.0.113.0/25를 발표하는데, 두 가지 이유로 유효하지 않습니다. origin AS64499는 ROA AS64498과 다르고, /25는 maxLength 24를 초과합니다. 두 라이브 실행이 증명합니다. 통제(발표만)에서는 cust1 트래픽이 peer2의 Null0로 빠져서 BLOCK(그 발표는 거부해야 합니다)이고, 보호(발표+route-map)에서는 영향 0건, 정당한 /24 via cust1 유지, 모든 트래픽 전달로 집행이 동작합니다. 정확한 /24 발표는 먼저 시험해 봤는데 edgeB1에서 정당한 직접 cust1 경로가 이겨서 RIB에 나타나지 않으므로, more-specific이 라이브로 관측 가능한 유효하지 않은 경우입니다. 여기서 BLOCK은 발표를 거부한다는 뜻이지 장애가 아닙니다. ROA AS를 통한 정당한 발표는 발동하지 않습니다.
 - **E3 — Hijack 광고 → BLOCK (대리 지표).** 고객 prefix가 peer IP를 통한 직접 eBGP 경로로 들어오면 BLOCK 위반입니다.
   Batfish의 routes 조회는 AS_PATH를 주지 않으므로, 직접 peer next-hop을 문서화된 대리 지표로 씁니다 (peer1 .2, peer2 .10, transit .22).
   E3는 합성 테스트로만 검증했고, 라이브 /25 hijack에서는 발동하지 않았습니다. 그 경우는 E1이 차단합니다.

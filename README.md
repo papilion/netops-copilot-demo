@@ -77,7 +77,7 @@ This demo never **applies** a change. It only returns a verdict.
 ## Advanced version
 
 A large lab with 13 nodes, 2 regions, and a route reflector lives in `advanced/`.
-It covers 8 scenarios: link failure, BGP session down, LOCAL_PREF exit shift, hijack, RR failure, DDoS blackhole (/32 victim host), RPKI invalid origin (recorded replay only), and AS_PATH prepend.
+It covers 8 scenarios: link failure, BGP session down, LOCAL_PREF exit shift, hijack, RR failure, DDoS blackhole (/32 victim host), RPKI invalid origin (live via route-map enforcement), and AS_PATH prepend.
 See the topology and verdict table in [advanced/README-advanced.md](advanced/README-advanced.md).
 
 ## Data notice

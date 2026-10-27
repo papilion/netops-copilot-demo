@@ -76,10 +76,15 @@ SCENARIOS = {
         "intended_victim": "203.0.113.130/32",
     },
     "rpki-invalid-origin": {
-        "title": "RPKI invalid origin: peer2 announces cust1 203.0.113.0/24 (ROA allows AS64498 only)",
-        "intent": "RPKI origin validation (recorded replay only): cust1's prefix 203.0.113.0/24 has a fictional ROA for AS64498 only. An announcement of the same prefix by peer2 (AS64499) is invalid and must be rejected (BLOCK). A legitimate announcement by AS64498 is valid and must not be blocked. Batfish does not expose a verifiable ROV state, so this scenario is recorded-replay-only — see the policy note for E5.",
-        "change_dir": None,
-        "live_supported": False,
+        "title": "RPKI invalid origin: peer2 announces cust1 203.0.113.0/25 (ROA: 203.0.113.0/24, AS64498, maxLength 24)",
+        "intent": "RPKI origin validation, LIVE via route-map enforcement (honest split): Batfish does NOT compute an ROV state, so the validation DECISION comes from the fictional ROA table (roas.json: 203.0.113.0/24 -> AS64498 only, maxLength 24), and the ENFORCEMENT is a real inbound route-map on edgeB1 that denies the invalid announcement. peer2 (AS64499) announces the more-specific 203.0.113.0/25: invalid on two counts — origin AS64499 != ROA AS64498, and /25 exceeds the ROA maxLength 24. (An exact /24 announcement from peer2 never becomes best at edgeB1 because the legitimate direct cust1 route wins, so it is unobservable in the RIB; the more-specific is the live-observable invalid case.) Without the route-map the /25 diverts cust1 flows to peer2's Null0 (control run, BLOCK: the announcement must be rejected); with the route-map the /25 is rejected, the legitimate /24 via cust1 stays, and all flows survive (protected run, enforcement works). BLOCK here means the invalid announcement must be rejected, not that an outage occurred.",
+        "change_dir": ADV_LAB / "changes" / "rpki-invalid-origin",
+        "control_dir": ADV_LAB / "changes" / "rpki-invalid-origin-unprotected",
+        "invalid_announcement": {
+            "prefix": "203.0.113.0/24", "more_specific": "203.0.113.0/25",
+            "peer_ip": "198.51.100.10", "peer_as": 64499,
+            "roa_as": 64498, "roa_maxlen": 24, "edge": "edgeB1",
+        },
     },
     "aspath-prepend-deprefer": {
         "title": "AS_PATH prepend deprefer: cust1 via edgeA2 prepended",
@@ -128,7 +133,8 @@ def _next_hop_ip(route_text):
     return m.group(1) if m else None
 
 
-def apply_advanced_policy(routes, flows, intended_victim=None):
+def apply_advanced_policy(routes, flows, intended_victim=None,
+                          invalid_announcement=None):
     """Simple policy first, then advanced extensions.
 
     E1: NULL_ROUTED is a fatal flow disposition (in addition to the simple
@@ -153,12 +159,21 @@ def apply_advanced_policy(routes, flows, intended_victim=None):
         saying so. Any non-victim break keeps the verdict BLOCK. The
         victim's /25 prefix route must stay intact — that is the
         granularity proof: only the one host drops, not the whole prefix.
-    E5: RPKI invalid origin -> BLOCK. For a watched prefix with a ROA entry,
-        a change route that is a direct eBGP route via a peer IP whose AS
-        does not match the ROA AS is an invalid announcement and must be
-        rejected. Same documented proxy as E3 (no AS_PATH from Batfish),
-        using the direct next-hop IP -> AS mapping. A route via the ROA
-        AS (customer IP or legitimate peer for its own prefix) does not fire.
+    E5: RPKI invalid origin -> BLOCK (honest split). Batfish does NOT
+        compute an ROV state, so the validation DECISION comes from the
+        ROA table (roas.json), and the ENFORCEMENT is verified live in
+        Batfish. Two branches: (a) classic: a change route that is a
+        direct eBGP route via a peer IP whose AS does not match the ROA
+        AS is an invalid announcement and must be rejected (same
+        documented proxy as E3, no AS_PATH from Batfish); (b) live
+        route-map branch: when the scenario declares an invalid
+        announcement and the merged evidence shows the announcement
+        diverting a flow for that prefix to NULL_ROUTED (control run)
+        while the legitimate prefix route stays intact (protected run),
+        the announcement is invalid and must be rejected — BLOCK here
+        means the announcement must be rejected, and the protected run
+        proves the edgeB1 route-map rejects it. A route via the ROA AS
+        (customer IP or legitimate peer for its own prefix) does not fire.
     Returns (verdict, violations, notes).
     """
     verdict, violations, notes = copilot.apply_policy(routes, flows)
@@ -207,6 +222,53 @@ def apply_advanced_policy(routes, flows, intended_victim=None):
                 "the direct next-hop IP -> AS mapping is used.)"
                 % (r["prefix"], ch_ip, PEER_IP_TO_AS[ch_ip], ROAS[r["prefix"]])
             )
+    # E5-live: route-map enforcement branch (see docstring). The merged
+    # evidence for a control+protected scenario contains both the
+    # control diversion (FLOW IMPACT -> NULL_ROUTED) and the protected
+    # intact rows; both must be present for this branch to fire.
+    if invalid_announcement:
+        import ipaddress as _ip2
+        victim_net = _ip2.ip_network(invalid_announcement["prefix"])
+        diverted = [f for f in flows
+                    if f["verdict"] == "FLOW IMPACT"
+                    and "NULL_ROUTED" in f["change"]
+                    and _ip2.ip_address(f["dst_ip"]) in victim_net]
+        intact = [f for f in flows
+                  if f["verdict"] == "UNCHANGED"
+                  and f["change"] == "DELIVERED_TO_SUBNET"
+                  and _ip2.ip_address(f["dst_ip"]) in victim_net]
+        legit = [r for r in routes
+                 if r["node"].lower() == invalid_announcement["edge"].lower()
+                 and r["prefix"] == invalid_announcement["prefix"]
+                 and r["change"].strip().startswith("bgp ")
+                 and _next_hop_ip(r["change"]) != invalid_announcement["peer_ip"]]
+        if diverted and intact and legit:
+            violations.append(
+                "RPKI invalid: %s announced by AS%s (peer IP %s) is "
+                "invalid — origin AS%s != ROA AS%s, and the "
+                "more-specific %s exceeds the ROA maxLength %s. "
+                "The announcement must be rejected (BLOCK here means "
+                "rejected, not an outage): the live control run "
+                "without the route-map diverts cust1 flows to "
+                "NULL_ROUTED, while the live protected run with the "
+                "%s route-map rejects it and keeps the legitimate "
+                "%s route intact."
+                % (invalid_announcement["more_specific"],
+                   invalid_announcement["peer_as"],
+                   invalid_announcement["peer_ip"],
+                   invalid_announcement["peer_as"],
+                   invalid_announcement["roa_as"],
+                   invalid_announcement["more_specific"],
+                   invalid_announcement["roa_maxlen"],
+                   invalid_announcement["edge"],
+                   invalid_announcement["prefix"]))
+            notes.append(
+                "Live enforcement check: with the %s route-map, the "
+                "invalid %s announcement is rejected; the legitimate "
+                "%s route and all watched flows survive."
+                % (invalid_announcement["edge"],
+                   invalid_announcement["more_specific"],
+                   invalid_announcement["prefix"]))
     # E4: intended blackhole -> REVIEW (only victim flows broken).
     if violations and intended_victim:
         import ipaddress as _ip
@@ -305,17 +367,23 @@ def propose_next_step_advanced(name, verdict, violations, notes, lang="ko"):
         if lang == "en":
             return ("AI explanation / proposed next step (to be "
                     "re-simulated — NOT the verdict): Reject the invalid "
-                    "announcement from peer2 and fix the ROA so only "
-                    "AS64498 may announce 203.0.113.0/24. Then "
-                    "re-simulate the legitimate AS64498 announcement "
-                    "and confirm it is ALLOW. Simulate this proposal "
-                    "too, before trusting it.")
+                    "announcement from peer2 and keep the edgeB1 "
+                    "route-map that rejects its 203.0.113.0/25 "
+                    "announcement (origin AS64499 != ROA AS64498, and "
+                    "/25 exceeds maxLength 24). Keep the ROA as "
+                    "203.0.113.0/24 for AS64498 only. Then re-simulate "
+                    "the legitimate AS64498 announcement and confirm "
+                    "it is ALLOW. Simulate this proposal too, before "
+                    "trusting it.")
         return ("AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — "
-                "판정이 아닙니다): peer2의 유효하지 않은 발표를 거부하고, "
-                "AS64498만 203.0.113.0/24를 발표할 수 있도록 ROA를 "
-                "수정하세요. 그다음 정당한 AS64498 발표를 다시 "
-                "시뮬레이션해서 ALLOW인지 확인하세요. 이 제안도 믿기 "
-                "전에 시뮬레이션하세요.")
+                "판정이 아닙니다): peer2의 유효하지 않은 "
+                "203.0.113.0/25 발표를 거부하는 edgeB1 route-map을 "
+                "유지하세요 (origin AS64499는 ROA AS64498과 다르고, "
+                "/25는 maxLength 24를 초과합니다). ROA는 "
+                "203.0.113.0/24에 AS64498만 허용하도록 유지하세요. "
+                "그다음 정당한 AS64498 발표를 다시 시뮬레이션해서 "
+                "ALLOW인지 확인하세요. 이 제안도 믿기 전에 "
+                "시뮬레이션하세요.")
     return copilot.propose_next_step(verdict, violations, notes, lang)
 
 
@@ -339,19 +407,34 @@ def run_one(name, mock=False, lang="ko"):
         print("SKIP (live): %s is recorded-replay-only; "
               "run with --mock to reproduce it." % name)
         return None
+    control_routes = control_flows = None
     if mock:
         raw = (DATA_DIR / ("%s.txt" % name)).read_text(encoding="utf-8")
-        if name == "rpki-invalid-origin":
-            source = ("recorded-replay-only (fictional ROA check; "
-                      "Batfish ROV not verifiable)")
-        else:
-            source = "mock-advanced (canned live Batfish impact report)"
+        source = "mock-advanced (canned live Batfish impact report)"
+    elif scenario.get("control_dir"):
+        # Two-run live scenario (RPKI): the protected change (announcement
+        # + rejecting route-map) and the unprotected control (announcement
+        # only). The canned txt concatenates both verbatim reports, so
+        # mock replay parses the same merged evidence and agrees.
+        raw_control = run_batfish_advanced(scenario["control_dir"])
+        raw = run_batfish_advanced(scenario["change_dir"])
+        control_routes, control_flows = copilot.parse_impact(raw_control)
+        raw = (raw_control + "\n\n===== Protected run (with route-map) "
+               "=====\n\n" + raw)
+        source = "batfish-live-advanced"
     else:
         raw = run_batfish_advanced(scenario["change_dir"])
         source = "batfish-live-advanced"
     routes, flows = copilot.parse_impact(raw)
+    protected_routes = protected_flows = None
+    if "===== Protected run (with route-map) =====" in raw:
+        _ctrl_raw, _prot_raw = raw.split(
+            "===== Protected run (with route-map) =====", 1)
+        control_routes, control_flows = copilot.parse_impact(_ctrl_raw)
+        protected_routes, protected_flows = copilot.parse_impact(_prot_raw)
     verdict, violations, notes = apply_advanced_policy(
-        routes, flows, intended_victim=scenario.get("intended_victim"))
+        routes, flows, intended_victim=scenario.get("intended_victim"),
+        invalid_announcement=scenario.get("invalid_announcement"))
     explanation = copilot.local_explanation(
         scenario, verdict, violations, notes, routes, flows, lang)
     # Proposed next step: rule-based by default (see the architecture
@@ -384,6 +467,10 @@ def run_one(name, mock=False, lang="ko"):
         "proposed_next_step": proposal,
         "proposed_next_step_source": proposal_source,
         "evidence_source": source,
+        "control_routes": control_routes,
+        "control_flows": control_flows,
+        "protected_routes": protected_routes,
+        "protected_flows": protected_flows,
         "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, "
                   "E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, "
                   "E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)",
@@ -397,6 +484,27 @@ def run_one(name, mock=False, lang="ko"):
               "(to be re-simulated — NOT the verdict)", "",
               proposal, "",
               "## Evidence (Batfish, %s)" % source, ""]
+    if control_routes is not None:
+        report += ["### Control run (announcement only, no route-map)", ""]
+        for r in control_routes:
+            report.append("- %s %s: %s (base: %s -> change: %s)"
+                          % (r["node"], r["prefix"], r["verdict"], r["base"], r["change"]))
+        for f in control_flows:
+            report.append("- flow %s -> %s: %s (%s -> %s)"
+                          % (f["start"], f["dst_ip"], f["verdict"], f["base"], f["change"]))
+        report += ["", "### Protected run (announcement + edgeB1 route-map)", ""]
+        for r in protected_routes:
+            report.append("- %s %s: %s (base: %s -> change: %s)"
+                          % (r["node"], r["prefix"], r["verdict"], r["base"], r["change"]))
+        for f in protected_flows:
+            report.append("- flow %s -> %s: %s (%s -> %s)"
+                          % (f["start"], f["dst_ip"], f["verdict"], f["base"], f["change"]))
+        report += ["", "---", "", "### Batfish raw output", "", "```", raw.rstrip(), "```"]
+        (OUT_DIR / ("%s.md" % name)).write_text("\n".join(report) + "\n", encoding="utf-8")
+        print("Verdict: %s" % verdict)
+        print(explanation)
+        print("-> %s" % (OUT_DIR / ("%s.md" % name)))
+        return result
     for r in routes:
         report.append("- %s %s: %s (base: %s -> change: %s)"
                       % (r["node"], r["prefix"], r["verdict"], r["base"], r["change"]))

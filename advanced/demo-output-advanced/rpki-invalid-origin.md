@@ -1,68 +1,110 @@
-# NetOps Copilot (advanced) — RPKI invalid origin: peer2 announces cust1 203.0.113.0/24 (ROA allows AS64498 only)
+# NetOps Copilot (advanced) — RPKI invalid origin: peer2 announces cust1 203.0.113.0/25 (ROA: 203.0.113.0/24, AS64498, maxLength 24)
 
 **Verdict: BLOCK**
 
-의도: RPKI origin validation (recorded replay only): cust1's prefix 203.0.113.0/24 has a fictional ROA for AS64498 only. An announcement of the same prefix by peer2 (AS64499) is invalid and must be rejected (BLOCK). A legitimate announcement by AS64498 is valid and must not be blocked. Batfish does not expose a verifiable ROV state, so this scenario is recorded-replay-only — see the policy note for E5.
+의도: RPKI origin validation, LIVE via route-map enforcement (honest split): Batfish does NOT compute an ROV state, so the validation DECISION comes from the fictional ROA table (roas.json: 203.0.113.0/24 -> AS64498 only, maxLength 24), and the ENFORCEMENT is a real inbound route-map on edgeB1 that denies the invalid announcement. peer2 (AS64499) announces the more-specific 203.0.113.0/25: invalid on two counts — origin AS64499 != ROA AS64498, and /25 exceeds the ROA maxLength 24. (An exact /24 announcement from peer2 never becomes best at edgeB1 because the legitimate direct cust1 route wins, so it is unobservable in the RIB; the more-specific is the live-observable invalid case.) Without the route-map the /25 diverts cust1 flows to peer2's Null0 (control run, BLOCK: the announcement must be rejected); with the route-map the /25 is rejected, the legitimate /24 via cust1 stays, and all flows survive (protected run, enforcement works). BLOCK here means the invalid announcement must be rejected, not that an outage occurred.
 판정: 적용 중단. 아래 영향이 확인됐기 때문에, 의도가 정확히 이 영향과 일치하지 않는 한 운영망에 적용하면 안 됩니다.
-- 위반: Hijack: watched customer prefix 203.0.113.0/24 at edgeb1 is now via peer IP 198.51.100.10 (direct eBGP next-hop, not a customer IP). AS_PATH is not exposed by Batfish's routes query, so the direct peer next-hop is used as the documented proxy.
-- 위반: RPKI invalid: watched prefix 203.0.113.0/24 announced via peer IP 198.51.100.10 (AS64499), but its ROA allows AS64498 only; the announcement must be rejected. (Proxy: Batfish exposes no AS_PATH, so the direct next-hop IP -> AS mapping is used.)
-- 참고: Path shift for 203.0.113.0/24 at corea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
-- 참고: Path shift for 203.0.113.0/24 at corea2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
-- 참고: Path shift for 203.0.113.0/24 at coreb1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
-- 참고: Path shift for 203.0.113.0/24 at coreb2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
-- 참고: Path shift for 203.0.113.0/24 at edgea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7
-- 참고: Path shift for 203.0.113.0/24 at edgea2: bgp via ip 198.51.100.6 -> ibgp via ip 192.0.2.7
-- 참고: Path shift for 203.0.113.0/24 at edgeb1: bgp via ip 198.51.100.18 -> bgp via ip 198.51.100.10
-영향 받은 prefix: 203.0.113.0/24
+- 위반: Watched flow coreA1 -> 203.0.113.10 stops working: DELIVERED_TO_SUBNET -> NULL_ROUTED (diverted to a Null0, e.g. by a more-specific hijack)
+- 위반: Watched flow coreB2 -> 203.0.113.10 stops working: DELIVERED_TO_SUBNET -> NULL_ROUTED (diverted to a Null0, e.g. by a more-specific hijack)
+- 위반: RPKI invalid: 203.0.113.0/25 announced by AS64499 (peer IP 198.51.100.10) is invalid — origin AS64499 != ROA AS64498, and the more-specific 203.0.113.0/25 exceeds the ROA maxLength 24. The announcement must be rejected (BLOCK here means rejected, not an outage): the live control run without the route-map diverts cust1 flows to NULL_ROUTED, while the live protected run with the edgeB1 route-map rejects it and keeps the legitimate 203.0.113.0/24 route intact.
+- 참고: Live enforcement check: with the edgeB1 route-map, the invalid 203.0.113.0/25 announcement is rejected; the legitimate 203.0.113.0/24 route and all watched flows survive.
+영향 받은 prefix: 없음
 
 ## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
 
 설명 (Meta Model API, muse-spark-1.3):
 
-판정은 BLOCK입니다. peer2(AS64499)가 고객 prefix 203.0.113.0/24를 발표했으며, 해당 ROA는 AS64498만 허용하므로 RPKI invalid로 거부해야 합니다. edgeb1에서 해당 prefix 경로가 198.51.100.18에서 직접 eBGP 피어 넥스트홉 198.51.100.10으로 바뀌었고, core/edge 장비들에서도 192.0.2.4에서 192.0.2.7로의 경로 이동이 관찰됐습니다. Batfish routes 조회는 AS_PATH를 노출하지 않아 넥스트홉 IP를 프록시로 사용했으며, ROV 상태 검증 불가로 recorded-replay-only 시나리오입니다.
+peer2(AS64499, 198.51.100.10)가 발표한 cust1 대역 203.0.113.0/25는 ROA(203.0.113.0/24, AS64498, maxLength 24) 대비 origin 불일치와 maxLength 초과로 invalid입니다.
+route-map 미적용 시 coreA1 -> 203.0.113.10 및 coreB2 -> 203.0.113.10 흐름이 DELIVERED_TO_SUBNET에서 NULL_ROUTED로 전환되어 Null0로 유도됩니다.
+edgeB1 인바운드 route-map 적용 시 해당 /25 발표가 거부되고 정상 203.0.113.0/24 via cust1 경로가 유지되어 감시 흐름이 모두 생존합니다.
+판정: verdict_from_batfish = BLOCK
 
-제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다. Meta Model API muse-spark-1.3이 규칙 기반 제안을 다듬은 것입니다):
+제안 (Meta Model API, 규칙 기반 제안을 다듬음 — 재시뮬레이션 필요, 판정이 아닙니다):
 
-203.0.113.0/24에 대한 peer2(AS64499)의 발표는 ROA(AS64498만 허용)에 어긋나므로 BLOCK으로 거부해야 합니다. AS64498의 정당한 발표는 차단되지 않도록 ROV 설정을 확인하세요. 이 제안을 신뢰하기 전에 반드시 시뮬레이션으로 검증하세요.
+edgeB1의 route-map으로 peer2가 발표한 203.0.113.0/25를 BLOCK(거부) 상태로 유지하세요. 해당 발표는 origin AS64499가 ROA(203.0.113.0/24, AS64498)와 다르고 /25가 maxLength 24를 초과해 무효합니다. 이 제안은 확정 판정이 아니니 정당한 AS64498 발표가 ALLOW되는지 시뮬레이션으로 확인하세요.
 
-판정은 Batfish 증거 기준이며, 이 설명과 제안은 판정이 아닙니다. 제안은 적용하기 전에 다시 시뮬레이션해야 합니다.
+## Evidence (Batfish, batfish-live-advanced)
 
-## Evidence (Batfish, recorded-replay-only (fictional ROA check; Batfish ROV not verifiable))
+### Control run (announcement only, no route-map)
 
 - corea1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - corea1 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - corea1 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
-- corea1 203.0.113.0/24: NEXT-HOP CHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.7)
+- corea1 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
 - corea1 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
 - corea2 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - corea2 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - corea2 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
-- corea2 203.0.113.0/24: NEXT-HOP CHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.7)
+- corea2 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
 - corea2 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
 - coreb1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - coreb1 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - coreb1 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
-- coreb1 203.0.113.0/24: NEXT-HOP CHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.7)
+- coreb1 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
 - coreb1 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
 - coreb2 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - coreb2 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - coreb2 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
-- coreb2 203.0.113.0/24: NEXT-HOP CHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.7)
+- coreb2 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
 - coreb2 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
 - edgea1 192.0.2.0/24: UNCHANGED (base: static via discard -> change: static via discard)
 - edgea1 198.51.100.128/25: UNCHANGED (base: bgp via ip 198.51.100.2 -> change: bgp via ip 198.51.100.2)
 - edgea1 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
-- edgea1 203.0.113.0/24: NEXT-HOP CHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.7)
+- edgea1 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
 - edgea1 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
 - edgea2 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - edgea2 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - edgea2 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
-- edgea2 203.0.113.0/24: NEXT-HOP CHANGED (base: bgp via ip 198.51.100.6 -> change: ibgp via ip 192.0.2.7)
+- edgea2 203.0.113.0/24: UNCHANGED (base: bgp via ip 198.51.100.6 -> change: bgp via ip 198.51.100.6)
 - edgea2 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
 - edgeb1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - edgeb1 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
 - edgeb1 198.51.100.192/26: UNCHANGED (base: bgp via ip 198.51.100.10 -> change: bgp via ip 198.51.100.10)
-- edgeb1 203.0.113.0/24: NEXT-HOP CHANGED (base: bgp via ip 198.51.100.18 -> change: bgp via ip 198.51.100.10)
+- edgeb1 203.0.113.0/24: UNCHANGED (base: bgp via ip 198.51.100.18 -> change: bgp via ip 198.51.100.18)
+- edgeb1 203.0.113.128/25: UNCHANGED (base: bgp via ip 198.51.100.14 -> change: bgp via ip 198.51.100.14)
+- flow coreA1 -> 198.51.100.130: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
+- flow coreA1 -> 203.0.113.10: FLOW IMPACT (DELIVERED_TO_SUBNET -> NULL_ROUTED)
+- flow coreA2 -> 198.51.100.200: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
+- flow coreB1 -> 198.51.100.200: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
+- flow coreB1 -> 203.0.113.130: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
+- flow coreB2 -> 203.0.113.10: FLOW IMPACT (DELIVERED_TO_SUBNET -> NULL_ROUTED)
+
+### Protected run (announcement + edgeB1 route-map)
+
+- corea1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- corea1 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- corea1 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- corea1 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
+- corea1 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- corea2 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- corea2 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- corea2 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- corea2 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
+- corea2 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- coreb1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- coreb1 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- coreb1 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- coreb1 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
+- coreb1 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- coreb2 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- coreb2 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- coreb2 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- coreb2 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
+- coreb2 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- edgea1 192.0.2.0/24: UNCHANGED (base: static via discard -> change: static via discard)
+- edgea1 198.51.100.128/25: UNCHANGED (base: bgp via ip 198.51.100.2 -> change: bgp via ip 198.51.100.2)
+- edgea1 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- edgea1 203.0.113.0/24: UNCHANGED (base: ibgp via ip 192.0.2.4 -> change: ibgp via ip 192.0.2.4)
+- edgea1 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- edgea2 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- edgea2 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- edgea2 198.51.100.192/26: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- edgea2 203.0.113.0/24: UNCHANGED (base: bgp via ip 198.51.100.6 -> change: bgp via ip 198.51.100.6)
+- edgea2 203.0.113.128/25: UNCHANGED (base: ibgp via ip 192.0.2.7 -> change: ibgp via ip 192.0.2.7)
+- edgeb1 192.0.2.0/24: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- edgeb1 198.51.100.128/25: UNCHANGED (base: ibgp via ip 192.0.2.3 -> change: ibgp via ip 192.0.2.3)
+- edgeb1 198.51.100.192/26: UNCHANGED (base: bgp via ip 198.51.100.10 -> change: bgp via ip 198.51.100.10)
+- edgeb1 203.0.113.0/24: UNCHANGED (base: bgp via ip 198.51.100.18 -> change: bgp via ip 198.51.100.18)
 - edgeb1 203.0.113.128/25: UNCHANGED (base: bgp via ip 198.51.100.14 -> change: bgp via ip 198.51.100.14)
 - flow coreA1 -> 198.51.100.130: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
 - flow coreA1 -> 203.0.113.10: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
@@ -76,9 +118,6 @@
 ### Batfish raw output
 
 ```
-# recorded-replay-only: fictional ROA check, NOT a live Batfish ROV run.
-# Batfish was tested with a Cisco-style rpki server stanza: it parsed OK
-# but produced no validation state and no impact, so no live RPKI claim is made.
 == Base snapshot ==
 All 13 config files parsed OK.
   corea1  192.0.2.0/24       ibgp via ip 192.0.2.3
@@ -123,43 +162,137 @@ All 13 config files parsed OK.
   flow coreB1 -> 203.0.113.130: DELIVERED_TO_SUBNET
   flow coreB2 -> 203.0.113.10: DELIVERED_TO_SUBNET
 
-== Proposed change: hijack-customer-prefix ==
+== Proposed change: rpki-invalid-origin-unprotected ==
 
 == Impact report ==
   corea1  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   corea1  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   corea1  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
-  corea1  203.0.113.0/24     NEXT-HOP CHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.7]
+  corea1  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
   corea1  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
   corea2  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   corea2  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   corea2  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
-  corea2  203.0.113.0/24     NEXT-HOP CHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.7]
+  corea2  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
   corea2  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
   coreb1  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   coreb1  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   coreb1  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
-  coreb1  203.0.113.0/24     NEXT-HOP CHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.7]
+  coreb1  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
   coreb1  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
   coreb2  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   coreb2  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   coreb2  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
-  coreb2  203.0.113.0/24     NEXT-HOP CHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.7]
+  coreb2  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
   coreb2  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
   edgea1  192.0.2.0/24       UNCHANGED        base[static via discard] -> change[static via discard]
   edgea1  198.51.100.128/25  UNCHANGED        base[bgp via ip 198.51.100.2] -> change[bgp via ip 198.51.100.2]
   edgea1  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
-  edgea1  203.0.113.0/24     NEXT-HOP CHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.7]
+  edgea1  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
   edgea1  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
   edgea2  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   edgea2  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   edgea2  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
-  edgea2  203.0.113.0/24     NEXT-HOP CHANGED        base[bgp via ip 198.51.100.6] -> change[ibgp via ip 192.0.2.7]
+  edgea2  203.0.113.0/24     UNCHANGED        base[bgp via ip 198.51.100.6] -> change[bgp via ip 198.51.100.6]
   edgea2  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
   edgeb1  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   edgeb1  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
   edgeb1  198.51.100.192/26  UNCHANGED        base[bgp via ip 198.51.100.10] -> change[bgp via ip 198.51.100.10]
-  edgeb1  203.0.113.0/24     NEXT-HOP CHANGED        base[bgp via ip 198.51.100.18] -> change[bgp via ip 198.51.100.10]
+  edgeb1  203.0.113.0/24     UNCHANGED        base[bgp via ip 198.51.100.18] -> change[bgp via ip 198.51.100.18]
+  edgeb1  203.0.113.128/25   UNCHANGED        base[bgp via ip 198.51.100.14] -> change[bgp via ip 198.51.100.14]
+  flow coreA1 -> 198.51.100.130: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
+  flow coreA1 -> 203.0.113.10: FLOW IMPACT (DELIVERED_TO_SUBNET -> NULL_ROUTED)
+  flow coreA2 -> 198.51.100.200: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
+  flow coreB1 -> 198.51.100.200: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
+  flow coreB1 -> 203.0.113.130: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
+  flow coreB2 -> 203.0.113.10: FLOW IMPACT (DELIVERED_TO_SUBNET -> NULL_ROUTED)
+
+Summary: 2 watched item(s) affected by the proposed change.
+
+
+===== Protected run (with route-map) =====
+
+== Base snapshot ==
+All 13 config files parsed OK.
+  corea1  192.0.2.0/24       ibgp via ip 192.0.2.3
+  corea1  198.51.100.128/25  ibgp via ip 192.0.2.3
+  corea1  198.51.100.192/26  ibgp via ip 192.0.2.7
+  corea1  203.0.113.0/24     ibgp via ip 192.0.2.4
+  corea1  203.0.113.128/25   ibgp via ip 192.0.2.7
+  corea2  192.0.2.0/24       ibgp via ip 192.0.2.3
+  corea2  198.51.100.128/25  ibgp via ip 192.0.2.3
+  corea2  198.51.100.192/26  ibgp via ip 192.0.2.7
+  corea2  203.0.113.0/24     ibgp via ip 192.0.2.4
+  corea2  203.0.113.128/25   ibgp via ip 192.0.2.7
+  coreb1  192.0.2.0/24       ibgp via ip 192.0.2.3
+  coreb1  198.51.100.128/25  ibgp via ip 192.0.2.3
+  coreb1  198.51.100.192/26  ibgp via ip 192.0.2.7
+  coreb1  203.0.113.0/24     ibgp via ip 192.0.2.4
+  coreb1  203.0.113.128/25   ibgp via ip 192.0.2.7
+  coreb2  192.0.2.0/24       ibgp via ip 192.0.2.3
+  coreb2  198.51.100.128/25  ibgp via ip 192.0.2.3
+  coreb2  198.51.100.192/26  ibgp via ip 192.0.2.7
+  coreb2  203.0.113.0/24     ibgp via ip 192.0.2.4
+  coreb2  203.0.113.128/25   ibgp via ip 192.0.2.7
+  edgea1  192.0.2.0/24       static via discard
+  edgea1  198.51.100.128/25  bgp via ip 198.51.100.2
+  edgea1  198.51.100.192/26  ibgp via ip 192.0.2.7
+  edgea1  203.0.113.0/24     ibgp via ip 192.0.2.4
+  edgea1  203.0.113.128/25   ibgp via ip 192.0.2.7
+  edgea2  192.0.2.0/24       ibgp via ip 192.0.2.3
+  edgea2  198.51.100.128/25  ibgp via ip 192.0.2.3
+  edgea2  198.51.100.192/26  ibgp via ip 192.0.2.7
+  edgea2  203.0.113.0/24     bgp via ip 198.51.100.6
+  edgea2  203.0.113.128/25   ibgp via ip 192.0.2.7
+  edgeb1  192.0.2.0/24       ibgp via ip 192.0.2.3
+  edgeb1  198.51.100.128/25  ibgp via ip 192.0.2.3
+  edgeb1  198.51.100.192/26  bgp via ip 198.51.100.10
+  edgeb1  203.0.113.0/24     bgp via ip 198.51.100.18
+  edgeb1  203.0.113.128/25   bgp via ip 198.51.100.14
+  flow coreA1 -> 198.51.100.130: DELIVERED_TO_SUBNET
+  flow coreA1 -> 203.0.113.10: DELIVERED_TO_SUBNET
+  flow coreA2 -> 198.51.100.200: DELIVERED_TO_SUBNET
+  flow coreB1 -> 198.51.100.200: DELIVERED_TO_SUBNET
+  flow coreB1 -> 203.0.113.130: DELIVERED_TO_SUBNET
+  flow coreB2 -> 203.0.113.10: DELIVERED_TO_SUBNET
+
+== Proposed change: rpki-invalid-origin ==
+
+== Impact report ==
+  corea1  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  corea1  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  corea1  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  corea1  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
+  corea1  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  corea2  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  corea2  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  corea2  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  corea2  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
+  corea2  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  coreb1  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  coreb1  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  coreb1  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  coreb1  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
+  coreb1  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  coreb2  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  coreb2  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  coreb2  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  coreb2  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
+  coreb2  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  edgea1  192.0.2.0/24       UNCHANGED        base[static via discard] -> change[static via discard]
+  edgea1  198.51.100.128/25  UNCHANGED        base[bgp via ip 198.51.100.2] -> change[bgp via ip 198.51.100.2]
+  edgea1  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  edgea1  203.0.113.0/24     UNCHANGED        base[ibgp via ip 192.0.2.4] -> change[ibgp via ip 192.0.2.4]
+  edgea1  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  edgea2  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  edgea2  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  edgea2  198.51.100.192/26  UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  edgea2  203.0.113.0/24     UNCHANGED        base[bgp via ip 198.51.100.6] -> change[bgp via ip 198.51.100.6]
+  edgea2  203.0.113.128/25   UNCHANGED        base[ibgp via ip 192.0.2.7] -> change[ibgp via ip 192.0.2.7]
+  edgeb1  192.0.2.0/24       UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  edgeb1  198.51.100.128/25  UNCHANGED        base[ibgp via ip 192.0.2.3] -> change[ibgp via ip 192.0.2.3]
+  edgeb1  198.51.100.192/26  UNCHANGED        base[bgp via ip 198.51.100.10] -> change[bgp via ip 198.51.100.10]
+  edgeb1  203.0.113.0/24     UNCHANGED        base[bgp via ip 198.51.100.18] -> change[bgp via ip 198.51.100.18]
   edgeb1  203.0.113.128/25   UNCHANGED        base[bgp via ip 198.51.100.14] -> change[bgp via ip 198.51.100.14]
   flow coreA1 -> 198.51.100.130: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
   flow coreA1 -> 203.0.113.10: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
@@ -168,5 +301,5 @@ All 13 config files parsed OK.
   flow coreB1 -> 203.0.113.130: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
   flow coreB2 -> 203.0.113.10: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
 
-Summary: 7 watched item(s) affected by the proposed change.
+Summary: 0 watched item(s) affected by the proposed change.
 ```

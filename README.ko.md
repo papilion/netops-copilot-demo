@@ -70,7 +70,7 @@ python3 mcp_server.py   # 도구: list_scenarios, validate_change, get_policy
 ## 고급 버전
 
 13개 노드·2개 지역·route reflector를 갖춘 대형 랩은 `advanced/`에 있습니다.
-링크 단절, BGP 세션 단절, LOCAL_PREF 출구 변경, hijack, RR 장애, DDoS 블랙홀(/32 피해자 호스트), RPKI 유효하지 않은 origin(기록 재생 전용), AS_PATH prepend까지 8개 시나리오입니다.
+링크 단절, BGP 세션 단절, LOCAL_PREF 출구 변경, hijack, RR 장애, DDoS 블랙홀(/32 피해자 호스트), RPKI 유효하지 않은 origin(route-map 집행으로 라이브), AS_PATH prepend까지 8개 시나리오입니다.
 자세한 구성도와 판정표는 [advanced/README-advanced.md](advanced/README-advanced.md)를 보세요.
 
 ## 데이터 주의

@@ -1,0 +1,48 @@
+1
+00:00:00,000 --> 00:00:08,000
+NetOps Copilot: check before you change. Validate a BGP or OSPF change in a virtual copy first. One video: the simple demo and the advanced lab.
+
+2
+00:00:08,000 --> 00:00:18,000
+Why was this made? A wrong BGP or OSPF change can stop traffic in seconds. Today operators check it by hand, slow and easy to miss. So try the change in a virtual copy first, then decide.
+
+3
+00:00:18,000 --> 00:00:28,000
+Think of roads and traffic lights. Router means intersection, prefix means neighbourhood. BGP is the road sign, OSPF is the map inside our network. Green means all watched roads work, red means a road is broken, yellow means a new road or new exit, and a human must confirm.
+
+4
+00:00:28,000 --> 00:00:38,000
+What does the AI do? It never decides the verdict. Batfish evidence does. It explains the verdict in plain words. It suggests a better change, then we simulate that too. Example: blackhole at /32, not the whole /25.
+
+5
+00:00:38,000 --> 00:00:50,000
+Simple diagram: five nodes, cores on the left, edge in the centre, peer and customer on the right.
+
+6
+00:00:50,000 --> 00:01:04,000
+Simple demo, three verdicts. OSPF cost change: green, ALLOW, watched roads unchanged. Peer prefix blocked: red, BLOCK, prefix lost, flow broken. New customer prefix: yellow, REVIEW, a human confirms it.
+
+7
+00:01:04,000 --> 00:01:16,000
+Advanced diagram: Region A on the left, Region B on the right, route reflector rr1 in gold on top.
+
+8
+00:01:16,000 --> 00:01:30,000
+Advanced lab, eight verdicts, part one. Link failure: green, ALLOW, traffic reroutes via coreA2. BGP session down: red, BLOCK, peer prefix lost at seven nodes. LOCAL_PREF exit shift: yellow, REVIEW, exit moves, flows live. More-specific hijack: red, BLOCK, cust1 flows to a dead end.
+
+9
+00:01:30,000 --> 00:01:44,000
+Advanced lab, part two. Route reflector failure: red, BLOCK, all six flows break. Blackhole /32: yellow, REVIEW, one host drops, prefix lives. RPKI invalid origin: red, BLOCK, live, the route-map rejects it. AS_PATH prepend: yellow, REVIEW, exit moves, flows live.
+
+10
+00:01:44,000 --> 00:01:58,000
+Terminal, live: RPKI invalid origin. Verdict: BLOCK. Without the route-map, cust1 flows divert to a dead end. With the route-map, the invalid announcement is rejected.
+
+11
+00:01:58,000 --> 00:02:10,000
+Terminal, mock run: blackhole /32. Verdict: REVIEW. Only the victim host drops. The customer prefix stays intact.
+
+12
+00:02:10,000 --> 00:02:23,970
+Conclusion. Safe change passes. Breaking change is stopped. New announcement waits for a human, even at 13 nodes. The model explains and suggests. It never decides.
+

@@ -335,30 +335,37 @@ The REVIEW is the human check: "is 203.0.113.130 really
 the intended victim?" before anyone applies it.
 
 **Test 11 — RPKI invalid origin → BLOCK (red).**
-Change: peer2 announces cust1's prefix 203.0.113.0/24.
+Change: peer2 announces the more-specific 203.0.113.0/25
+of cust1's prefix.
 Watch: the ROA (a certificate-like record that says who
-may announce a prefix) for that prefix, which allows
-AS64498 only. Peer2 is AS64499.
-Pass (what happened): the announcement is invalid and must
-be rejected. Verdict BLOCK — even though a forwarding
-table would show the route, because the route itself must
-not be accepted.
+may announce a prefix) for 203.0.113.0/24, which allows
+AS64498 only and a maximum length of 24. Peer2 is AS64499.
+Pass (what happened): the announcement is invalid on two
+counts — wrong origin AS, and /25 is longer than the ROA
+allows — and must be rejected. Verdict BLOCK. Two live
+runs prove it: without the edgeB1 route-map, cust1 flows
+divert to peer2's dead end; with the route-map, the /25
+is rejected, the legitimate /24 stays, and all flows
+survive.
 Fail would be: the tool accepts any announcement as long
 as a route exists, or blocks a legitimate announcement by
 the ROA's own AS.
 Why an operator cares: RPKI is how the internet checks
 "are you really allowed to announce this address?" Without
 it, a wrong announcement can hijack traffic.
-*Honest limit, read this:* this test is recorded replay
-(mock) only — a canned report played back without a live
-server, explained once here and called "recorded replay"
-in new user-facing text. Batfish does not expose a
-verifiable ROV (route origin validation) state: a
-Cisco-style RPKI server setting parsed fine but produced
-no validation state and no impact, so no live RPKI claim
-is made. Like the hijack rule, it uses the direct peer
-next-hop IP as a proxy, because Batfish's routes query
-exposes no AS_PATH.
+*Honest limit, read this:* Batfish does not compute an
+ROV (route origin validation) state, so it is never
+claimed to have validated anything: a Cisco-style RPKI
+server setting parsed fine but produced no validation
+state and no impact. The validation decision comes from
+the ROA table; the enforcement — the edgeB1 route-map
+rejecting the /25 — is what Batfish proves live. BLOCK
+here means the announcement must be rejected, not that
+an outage occurred. An exact /24 announcement from peer2
+was tested first and never becomes best at edgeB1 (the
+legitimate direct cust1 route wins), so it is invisible
+in the routing table; the more-specific is the case you
+can actually see live.
 
 ## What does the AI do? It explains and suggests — it never decides
 

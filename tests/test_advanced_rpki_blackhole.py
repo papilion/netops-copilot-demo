@@ -73,10 +73,18 @@ class TestBlackholeE4(unittest.TestCase):
         self.assertEqual(verdict, "BLOCK")
 
 
+RPKI_INVALID = {
+    "prefix": "203.0.113.0/24", "more_specific": "203.0.113.0/25",
+    "peer_ip": "198.51.100.10", "peer_as": 64499,
+    "roa_as": 64498, "roa_maxlen": 24, "edge": "edgeB1",
+}
+
+
 class TestRPKIE5(unittest.TestCase):
     def test_invalid_origin_is_block(self):
         routes, flows = routes_flows_for("rpki-invalid-origin")
-        verdict, violations, _ = advanced.apply_advanced_policy(routes, flows)
+        verdict, violations, _ = advanced.apply_advanced_policy(
+            routes, flows, invalid_announcement=RPKI_INVALID)
         self.assertEqual(verdict, "BLOCK")
         self.assertTrue(any("RPKI invalid" in v for v in violations))
 
@@ -90,11 +98,34 @@ class TestRPKIE5(unittest.TestCase):
         self.assertNotEqual(verdict, "BLOCK")
         self.assertFalse(any("RPKI" in v for v in violations))
 
-    def test_rpki_scenario_is_recorded_replay_only(self):
-        self.assertFalse(
-            advanced.SCENARIOS["rpki-invalid-origin"].get("live_supported", True))
-        self.assertTrue(
-            advanced.SCENARIOS["blackhole-rtbh-cust2"].get("live_supported", True))
+    def test_rpki_scenario_is_live_not_recorded_only(self):
+        # RPKI is live since the route-map-enforcement redesign: the
+        # scenario has a real change overlay (announcement + route-map)
+        # plus an unprotected control overlay, and no live_supported=False.
+        sc = advanced.SCENARIOS["rpki-invalid-origin"]
+        self.assertTrue(sc.get("live_supported", True))
+        self.assertTrue(sc["change_dir"].name == "rpki-invalid-origin")
+        self.assertTrue(sc["control_dir"].name == "rpki-invalid-origin-unprotected")
+        self.assertEqual(sc["invalid_announcement"]["more_specific"],
+                         "203.0.113.0/25")
+
+    def test_rpki_protected_run_keeps_legit_route(self):
+        # Merged evidence: the protected run's edgeB1 cust1 /24 route
+        # must stay via cust1 (198.51.100.18), never via peer2, while
+        # the control run diverts cust1 flows to NULL_ROUTED.
+        routes, flows = routes_flows_for("rpki-invalid-origin")
+        legit = [r for r in routes if r["node"] == "edgeb1"
+                 and r["prefix"] == "203.0.113.0/24"]
+        self.assertTrue(legit)
+        self.assertTrue(all(r["change"] == "bgp via ip 198.51.100.18"
+                            for r in legit), legit)
+        diverted = [f for f in flows if f["verdict"] == "FLOW IMPACT"
+                    and "NULL_ROUTED" in f["change"]
+                    and f["dst_ip"] == "203.0.113.10"]
+        intact = [f for f in flows if f["verdict"] == "UNCHANGED"
+                  and f["dst_ip"] == "203.0.113.10"]
+        self.assertTrue(diverted, "control diversion missing")
+        self.assertTrue(intact, "protected intact rows missing")
 
     def test_roa_table_matches_watch_list(self):
         self.assertEqual(advanced.ROAS["203.0.113.0/24"], 64498)

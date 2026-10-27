@@ -2,7 +2,7 @@
 
 > **What is this?** The same idea as the simple demo, on a realistic backbone: 13 nodes, 2 regions, a route reflector.
 > **What problem does it solve?** Simple demos cannot show link failures, exit shifts, hijacks, or a reflector outage.
-> **What is the verdict?** 8 scenarios: 1 ALLOW, 3 REVIEW, 4 BLOCK. Live and recorded replay agree on the 7 live scenarios; RPKI is recorded-replay-only (see below).
+> **What is the verdict?** 8 scenarios: 1 ALLOW, 3 REVIEW, 4 BLOCK. All 8 are live; live and recorded-replay verdicts agree on all 8 (see E5 for the RPKI honest split).
 
 The basic idea (simulate first, judge from evidence, human decides) is in the [simple README](../README.md).
 This file only covers what is bigger here.
@@ -53,7 +53,7 @@ Watched flows (6): coreA1→cust1, coreA1→peer1, coreB1→cust2, coreB1→peer
 
 ## Scenarios
 
-Live and recorded-replay verdicts are identical for the 7 live scenarios. RPKI has no live run (see E5).
+Live and recorded-replay verdicts are identical for all 8 scenarios. RPKI is live via route-map enforcement (see E5).
 
 | Scenario | Change | Verdict | What happened |
 |---|---|---|---|
@@ -63,7 +63,7 @@ Live and recorded-replay verdicts are identical for the 7 live scenarios. RPKI h
 | `hijack-customer-prefix` | peer2 announces 203.0.113.0/25 via Null0 | 🔴 BLOCK | Flows to 203.0.113.10 go DELIVERED→NULL_ROUTED |
 | `rr-failure` | rr1 interfaces shutdown | 🔴 BLOCK | 29 iBGP routes lost, all 6 flows to NO_ROUTE |
 | `blackhole-rtbh-cust2` | edgeB1 /32 Null0 for victim host 203.0.113.130 only | 🟡 REVIEW | Only that host's flow goes DELIVERED→NULL_ROUTED; the cust2 /25 route stays intact, all other flows survive |
-| `rpki-invalid-origin` | peer2 announces cust1 203.0.113.0/24 (ROA allows AS64498 only) — recorded replay only | 🔴 BLOCK | Invalid origin must be rejected, even though a forwarding table would show the route |
+| `rpki-invalid-origin` | peer2 announces cust1 203.0.113.0/25 (ROA: 203.0.113.0/24, AS64498, maxLength 24) — live, two runs: control (no route-map) diverts cust1 flows to Null0, protected (edgeB1 route-map) rejects it | 🔴 BLOCK | Invalid origin must be rejected; BLOCK here means rejected, not an outage |
 | `aspath-prepend-deprefer` | Prepend AS64496 ×2 to cust1 at edgeA2 | 🟡 REVIEW | Same exit shift as LOCAL_PREF, by a different mechanism, flows survive |
 
 ## How to run
@@ -77,7 +77,7 @@ python3 advanced/advanced.py --all
 python3 -m unittest discover -s tests   # simple + advanced, 26 tests
 ```
 
-Files here: `advanced.py` (runner), `roas.json` (fictional ROA table for the RPKI check), `demo-data-advanced/*.txt` (verbatim live impact reports, plus the recorded-replay RPKI report),
+Files here: `advanced.py` (runner), `roas.json` (fictional ROA table for the RPKI check), `demo-data-advanced/*.txt` (verbatim live impact reports; the RPKI file holds both live runs, control + protected),
 `demo-output-advanced/*.md` + `*.json` (one per scenario, labelled live or mock honestly).
 The Batfish lab itself lives outside the demo repo at `~/workspace/batfish-lab-advanced/` and is not pushed to GitHub;
 the demo repo carries the canned reports, so a judge can reproduce every verdict with `--mock` alone.
@@ -89,7 +89,7 @@ the demo repo carries the canned reports, so a judge can reproduce every verdict
 - **E2 — Exit shift → REVIEW.** If flows survive but a prefix's exit edge changes, a human must confirm the new exit.
   A next-hop change staying on the same edge is still ALLOW.
 - **E4 — Intended blackhole (/32) → REVIEW.** If the scenario declares an intended victim host and every fatal violation is a flow to that /32 host, the drop is the intended mitigation, not an outage: REVIEW. Any non-victim break keeps BLOCK. Why /32, in plain words: a DDoS usually targets one host, so operators blackhole the /32 host route. Blackholing the whole /25 would also kill the customer's innocent hosts on the same prefix, so the /32 minimises collateral. The live proof is the granularity: the victim host flow goes DELIVERED→NULL_ROUTED while the cust2 /25 route at edgeB1 stays `bgp via ip 198.51.100.14`, unchanged, and all other 5 flows survive.
-- **E5 — RPKI invalid origin → BLOCK (recorded replay only).** For a watched prefix with a ROA entry, a change route that is a direct eBGP route via a peer IP whose AS does not match the ROA AS is invalid and must be rejected — even if the forwarding table would show it, because the route itself must not be accepted. Batfish does not expose a verifiable ROV (route origin validation) state: a Cisco-style RPKI server stanza parsed OK but produced no validation state and no impact, so no live RPKI claim is made. The scenario is recorded replay (mock) — a canned report played back without a live server, explained once here and called "recorded replay" in new user-facing text — using the same documented next-hop IP → AS proxy as E3. A legitimate announcement via the ROA AS does not fire.
+- **E5 — RPKI invalid origin → BLOCK (LIVE via route-map enforcement, honest split).** Batfish does NOT compute an ROV (route origin validation) state: a Cisco-style RPKI server stanza parsed OK but produced no validation state and no impact, so Batfish itself is never claimed to have validated anything. The validation DECISION comes from the fictional ROA table (203.0.113.0/24 → AS64498, maxLength 24); the ENFORCEMENT is a real inbound route-map on edgeB1. peer2 (AS64499) announces the more-specific 203.0.113.0/25: invalid on two counts — origin AS64499 ≠ ROA AS64498, and /25 exceeds maxLength 24. Two live runs prove it: control (announcement only) diverts cust1 flows to peer2's Null0 → BLOCK (the announcement must be rejected); protected (announcement + route-map) has 0 items affected, the legitimate /24 via cust1 stays, all flows delivered → enforcement works. An exact /24 announcement from peer2 was tested first and never becomes best at edgeB1 (the legitimate direct cust1 route wins), so it is unobservable in the RIB; the more-specific is the live-observable invalid case. BLOCK here means the announcement must be rejected, not that an outage occurred. A legitimate announcement via the ROA AS does not fire.
 - **E3 — Hijack announcement → BLOCK (proxy).** A customer prefix arriving as a direct eBGP route via a peer IP is a BLOCK violation.
   Batfish's routes query returns no AS_PATH, so the direct peer next-hop is the documented proxy (peer1 .2, peer2 .10, transit .22).
   E3 is unit-tested synthetically; it did not fire in the live /25 hijack, which E1 blocks instead.
