@@ -297,7 +297,6 @@ function renderList() {
   const group = document.getElementById('group').value;
   const sel = document.getElementById('scenario');
   sel.innerHTML = '';
-  document.getElementById('topo').src = group === 'simple' ? '/docs/topology-simple.png' : '/docs/topology-advanced.png';
   scenarios.filter(s => s.group === group).forEach(s => {
     const o = document.createElement('option');
     o.value = s.name;
