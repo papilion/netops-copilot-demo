@@ -474,6 +474,17 @@ def run_one(name, mock=False, lang="ko"):
         "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, "
                   "E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, "
                   "E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)",
+        "cli_view": (
+            copilot.render_cli(control_routes, control_flows,
+                               label="Control run (announcement only, "
+                                     "no route-map)")
+            + "\n\n"
+            + copilot.render_cli(protected_routes, protected_flows,
+                                 label="Protected run (announcement + "
+                                       "edgeB1 route-map)")
+            if control_routes is not None and protected_routes is not None
+            else copilot.render_cli(routes, flows)
+        ),
     }
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / ("%s.json" % name)).write_text(
@@ -499,7 +510,20 @@ def run_one(name, mock=False, lang="ko"):
         for f in protected_flows:
             report.append("- flow %s -> %s: %s (%s -> %s)"
                           % (f["start"], f["dst_ip"], f["verdict"], f["base"], f["change"]))
-        report += ["", "---", "", "### Batfish raw output", "", "```", raw.rstrip(), "```"]
+        report += ["",
+                   "## CLI-style view (Batfish evidence rendered like "
+                   "router output — NOT actual device output)", "",
+                   "```",
+                   copilot.render_cli(control_routes, control_flows,
+                                      label="Control run (announcement "
+                                            "only, no route-map)"),
+                   "",
+                   copilot.render_cli(protected_routes, protected_flows,
+                                      label="Protected run (announcement "
+                                            "+ edgeB1 route-map)"),
+                   "```", "",
+                   "---", "", "### Batfish raw output", "", "```",
+                   raw.rstrip(), "```"]
         (OUT_DIR / ("%s.md" % name)).write_text("\n".join(report) + "\n", encoding="utf-8")
         print("Verdict: %s" % verdict)
         print(explanation)
@@ -511,7 +535,12 @@ def run_one(name, mock=False, lang="ko"):
     for f in flows:
         report.append("- flow %s -> %s: %s (%s -> %s)"
                       % (f["start"], f["dst_ip"], f["verdict"], f["base"], f["change"]))
-    report += ["", "---", "", "### Batfish raw output", "", "```", raw.rstrip(), "```"]
+    report += ["",
+               "## CLI-style view (Batfish evidence rendered like "
+               "router output — NOT actual device output)", "",
+               "```", copilot.render_cli(routes, flows), "```", "",
+               "---", "", "### Batfish raw output", "", "```",
+               raw.rstrip(), "```"]
     (OUT_DIR / ("%s.md" % name)).write_text("\n".join(report) + "\n", encoding="utf-8")
     print("Verdict: %s" % verdict)
     print(explanation)

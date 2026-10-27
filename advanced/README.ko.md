@@ -122,6 +122,22 @@ ROA 수정)을 제안하고, 그 제안은 믿기 전에 다시
 (RPKI 재실행 약 0.02달러 별도)입니다. 저렴하다는 뜻이지,
 엔지니어링 판단을 대체한다는 뜻이 아닙니다.
 
+
+## Batfish와 실제 라우터 명령어 비교 (짧은 버전)
+
+Batfish는 라우터에 접속하지 않고 설정 스냅샷에서 시뮬레이션합니다.
+대조표: `show ip route` -> routes 질의(네트워크, 프로토콜,
+next-hop), `show ip bgp` -> bgpRib, `show ip bgp summary` ->
+bgpSessionStatus(세션 up/down), `traceroute` / `ping` ->
+traceroute 질의(DELIVERED_TO_SUBNET = 도착, NO_ROUTE = 경로 없음,
+NULL_ROUTED = Null0으로 버림), `show running-config` -> 파싱된
+설정 스냅샷입니다. 각 리포트에는 같은 증거의 CLI 스타일 보기가
+있습니다. Batfish 증거를 CLI 형태로 그린 것이지, 실제 라우터에서
+캡처한 출력이 아닙니다. Batfish가 보여주지 않는 것: 스냅샷을
+넘어선 라이브 인터페이스 상태, CPU, ARP/MAC 테이블, 실시간
+트래픽입니다. Admin distance, metric, 인터페이스 이름, uptime,
+세션 상태는 지어내지 않고 뺍니다.
+
 ## 부록 — 세부 사항 / 정직한 메모
 
 - **AI 역할 — 모델은 판정을 내리지 않습니다.** 판정은 Batfish 증거가 고정된 규칙으로 내립니다. Meta 모델은 (1) 증거 JSON을 보고 판정을 평문으로 설명하고, (2) 다음 단계나 최적화를 제안할 뿐이며, 그 제안은 믿기 전에 다시 시뮬레이션해야 합니다. 각 리포트에는 "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다)"로 들어 있습니다. 블랙홀 /32(호스트 하나에만 차단을 유지하고 /25 전체로 넓히지 않기)가 최적화 예시입니다. 솔직한 현황: 리포트 11건에는 이제 실제 Meta Model API 설명이 들어 있습니다(합계 약 0.17달러, RPKI 재실행 약 0.02달러 별도). 규칙 기반 문장은 폴백입니다. 단순 데모의 `demo-output/playground-samples.md`에 있는 playground 샘플은 추가 예시입니다.

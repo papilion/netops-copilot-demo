@@ -537,3 +537,35 @@ honest labels — check the `evidence_source` field in the JSON.
 copy first, watch the roads that matter, and let a traffic
 light — green, yellow, or red — tell a human whether to go,
 ask, or stop.
+
+## 9. How Batfish answers compare to real router commands
+
+Batfish never connects to a router. It reads a config snapshot and
+calculates what that config would do. That is why its answers carry
+the same fields as real router commands, but in a different shape
+(a table or JSON, not a device screen). The demo configs are
+Cisco-style because Batfish parses Cisco, Juniper and Arista
+configs — the three vendors on a typical ISP backbone.
+
+| Real command (Cisco-style) | Batfish question | What matches |
+| --- | --- | --- |
+| `show ip route` | routes | Network, protocol (BGP / iBGP / static), next-hop IP |
+| `show ip bgp` | bgpRib | The BGP routes a router holds |
+| `show ip bgp summary` | bgpSessionStatus | Whether a BGP session is up (Established) or down |
+| `traceroute` / `ping` | traceroute | Whether traffic arrives: DELIVERED_TO_SUBNET = arrived, NO_ROUTE = no path, NULL_ROUTED = dropped to Null0 |
+| `show running-config` | the parsed config snapshot itself | The config Batfish simulated from |
+
+Every report also carries a CLI-style view: the same Batfish
+evidence rendered like `show ip route` output, for example
+`edge1: B 198.51.100.128/25 — route LOST (was: bgp via ip 198.51.100.2)`.
+The disclaimer on that view is part of the evidence: it is
+Batfish evidence in CLI form, NOT output captured from a real
+router. No router was connected and no command was run on a device.
+
+**What Batfish does NOT show.** Live interface state beyond the
+config snapshot (a link that flaps on its own), CPU load, ARP and
+MAC tables, and real-time traffic volume. It simulates from a
+snapshot: a shutdown is modelled by changing the config, not by
+detecting a real failure. Admin distance, metric, interface names,
+uptime and session state are not reported by Batfish, so the
+CLI-style view omits them instead of inventing them.

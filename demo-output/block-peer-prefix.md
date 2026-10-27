@@ -36,6 +36,21 @@ Batfish 검증 결과 BLOCK이므로 이 inbound 차단 변경을 적용하지 �
 - flow core1 -> 198.51.100.130: FLOW IMPACT (DELIVERED_TO_SUBNET -> NO_ROUTE)
 - flow core1 -> 203.0.113.10: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
 
+## CLI-style view (Batfish evidence rendered like router output — NOT actual device output)
+
+```
+CLI-style view — Batfish evidence rendered like router output. NOT actual device output: no router was connected and no command was run on a device. Admin distance and metric are not reported by Batfish, so they are omitted here (shown as nothing, never invented). Interface names, uptime and BGP session state are likewise not reported and are never shown.
+
+Routes (changed watched routes only; UNCHANGED routes omitted):
+  core1: i 198.51.100.128/25 — route LOST (was: ibgp via ip 192.0.2.3)
+  core2: i 198.51.100.128/25 — route LOST (was: ibgp via ip 192.0.2.3)
+  edge1: B 198.51.100.128/25 — route LOST (was: bgp via ip 198.51.100.2)
+
+Flows (traceroute-style result; no hop list reported):
+  core1 -> 198.51.100.130: DELIVERED_TO_SUBNET -> NO_ROUTE (CHANGED)
+  core1 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+```
+
 ---
 
 ### Batfish raw output

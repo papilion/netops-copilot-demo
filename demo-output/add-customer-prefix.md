@@ -34,6 +34,19 @@ edge1에서 BGP(198.51.100.6 경유)로 203.0.113.128/25에 대한 신규 경로
 - flow core1 -> 198.51.100.130: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
 - flow core1 -> 203.0.113.10: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
 
+## CLI-style view (Batfish evidence rendered like router output — NOT actual device output)
+
+```
+CLI-style view — Batfish evidence rendered like router output. NOT actual device output: no router was connected and no command was run on a device. Admin distance and metric are not reported by Batfish, so they are omitted here (shown as nothing, never invented). Interface names, uptime and BGP session state are likewise not reported and are never shown.
+
+Routes (changed watched routes only; UNCHANGED routes omitted):
+  edge1: B 203.0.113.128/25 via 198.51.100.6 — route ADDED
+
+Flows (traceroute-style result; no hop list reported):
+  core1 -> 198.51.100.130: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  core1 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+```
+
 ---
 
 ### Batfish raw output

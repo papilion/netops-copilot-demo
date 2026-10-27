@@ -535,3 +535,35 @@ mock이란: 라이브 Batfish 실행을 이미 끝내고, 그 영향
 가상 복사본에서 먼저 바꿔보고, 중요한 도로를 지켜보고,
 초록·노랑·빨간 신호등이 사람에게 가라, 물어보라, 멈추라고
 알려주게 하라.
+
+## 9. Batfish 답과 실제 라우터 명령어 비교 (그리고 보여주지 않는 것)
+
+Batfish는 라우터에 접속하지 않습니다. 설정 스냅샷을 읽고, 그
+설정이면 어떻게 될지를 계산합니다. 그래서 답의 내용은 실제
+라우터 명령어와 같은 필드를 담고 있지만, 모양은 다릅니다
+(장비 화면이 아니라 표나 JSON입니다). 데모 설정이 Cisco
+스타일인 이유는 Batfish가 Cisco, Juniper, Arista 설정을
+읽기 때문입니다. 전형적인 ISP 백본의 세 벤더입니다.
+
+| 실제 명령어 (Cisco 스타일) | Batfish 질의 | 일치하는 것 |
+| --- | --- | --- |
+| `show ip route` | routes | 네트워크, 프로토콜(BGP / iBGP / static), next-hop IP |
+| `show ip bgp` | bgpRib | 라우터가 가진 BGP 경로 |
+| `show ip bgp summary` | bgpSessionStatus | BGP 세션이 살아있는지(Established) 끊겼는지 |
+| `traceroute` / `ping` | traceroute | 트래픽 도착 여부: DELIVERED_TO_SUBNET = 도착, NO_ROUTE = 경로 없음, NULL_ROUTED = Null0으로 버림 |
+| `show running-config` | 파싱된 설정 스냅샷 자체 | Batfish가 시뮬레이션한 설정 |
+
+모든 리포트에는 CLI 스타일 보기도 들어 있습니다. 같은 Batfish
+증거를 `show ip route` 형태로 그린 것으로, 예를 들어
+`edge1: B 198.51.100.128/25 — route LOST (was: bgp via ip 198.51.100.2)`입니다.
+그 보기에 붙은 주의 문구가 증거의 일부입니다. 실제 라우터에서
+캡처한 출력이 아니라, Batfish 증거를 CLI 형태로 그린 것입니다.
+라우터에 접속한 적도, 장비에서 명령어를 실행한 적도 없습니다.
+
+**Batfish가 보여주지 않는 것.** 설정 스냅샷을 넘어선 라이브
+인터페이스 상태(스스로 flapping하는 링크), CPU 부하, ARP·MAC
+테이블, 실시간 트래픽 양입니다. 스냅샷에서 시뮬레이션합니다.
+shutdown은 실제 장애를 감지하는 것이 아니라 설정을 바꿔서
+모델링합니다. Admin distance, metric, 인터페이스 이름,
+uptime, 세션 상태는 Batfish가 보고하지 않으므로, CLI 스타일
+보기에서는 지어내지 않고 빼버립니다.

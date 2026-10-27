@@ -321,6 +321,91 @@ def parse_impact(text):
     return routes, flows
 
 
+CLI_DISCLAIMER = (
+    "CLI-style view — Batfish evidence rendered like router output. "
+    "NOT actual device output: no router was connected and no command "
+    "was run on a device. Admin distance and metric are not reported "
+    "by Batfish, so they are omitted here (shown as nothing, never "
+    "invented). Interface names, uptime and BGP session state are "
+    "likewise not reported and are never shown."
+)
+
+
+def _cli_protocol(route_text):
+    """Protocol code from a Batfish route string, or '?' if unknown."""
+    text = (route_text or "").strip()
+    if text.startswith("ibgp "):
+        return "i"
+    if text.startswith("bgp "):
+        return "B"
+    if text.startswith("static "):
+        return "S"
+    return "?"
+
+
+def _cli_via(route_text):
+    """Next-hop from a Batfish route string, using only reported fields."""
+    text = route_text or ""
+    m = re.search(r"via ip (\S+)", text)
+    if m:
+        return m.group(1)
+    if "via discard" in text:
+        return "discard"
+    return "—"
+
+
+def render_cli(routes, flows, label=None):
+    """Render Batfish evidence in Cisco-style CLI form.
+
+    Uses ONLY fields Batfish actually reports (node, prefix, route
+    verdict, base/change route strings, flow start/destination and
+    base/change dispositions). Changed watched routes only are shown;
+    UNCHANGED routes are omitted and said so, because a full RIB dump
+    would bury the change. Flows have no hop list in the evidence, so
+    they are rendered as a traceroute-style result line, not as hops.
+    The disclaimer is part of the output: this is Batfish evidence in
+    CLI form, never output captured from a real router.
+    """
+    lines = []
+    if label:
+        lines.append(label)
+    lines.append(CLI_DISCLAIMER)
+    lines.append("")
+    lines.append("Routes (changed watched routes only; "
+                 "UNCHANGED routes omitted):")
+    changed = [r for r in routes if r["verdict"] != "UNCHANGED"]
+    if not changed:
+        lines.append("  (no watched route changed)")
+    for r in changed:
+        # For a lost route the change string is "None"; use the base
+        # string so the code still reflects the route that was lost.
+        # The node is part of every line: a "show ip route" output
+        # belongs to one device, and without the node the same prefix
+        # would appear twice with no way to tell core1 from core2.
+        src = r["change"] if r["change"] not in (None, "None") else r["base"]
+        code = _cli_protocol(src)
+        if r["verdict"] == "ROUTE LOST":
+            lines.append("  %s: %s %s — route LOST (was: %s)"
+                         % (r["node"], code, r["prefix"], r["base"]))
+        elif r["verdict"] == "ROUTE ADDED":
+            lines.append("  %s: %s %s via %s — route ADDED"
+                         % (r["node"], code, r["prefix"], _cli_via(src)))
+        else:
+            lines.append("  %s: %s %s via %s — %s (was: %s)"
+                         % (r["node"], code, r["prefix"], _cli_via(src),
+                            r["verdict"], r["base"]))
+    lines.append("")
+    lines.append("Flows (traceroute-style result; no hop list reported):")
+    if not flows:
+        lines.append("  (no watched flows)")
+    for f in flows:
+        status = "unchanged" if f["verdict"] == "UNCHANGED" else "CHANGED"
+        lines.append("  %s -> %s: %s -> %s (%s)"
+                     % (f["start"], f["dst_ip"], f["base"], f["change"],
+                        status))
+    return "\n".join(lines)
+
+
 def apply_policy(routes, flows):
     violations, notes = [], []
     for r in routes:
@@ -553,6 +638,7 @@ def run_one(name, mock=False, lang="ko"):
         "evidence_source": evidence_source,
         "evidence_note": "All data fictional (RFC 5737, AS 64496-64498). "
                          "Batfish raw output is in the .txt report.",
+        "cli_view": render_cli(routes, flows),
     }
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / ("%s.json" % name)).write_text(
@@ -577,6 +663,13 @@ def run_one(name, mock=False, lang="ko"):
     for f in flows:
         report.append("- flow %s -> %s: %s (%s -> %s)"
                       % (f["start"], f["dst_ip"], f["verdict"], f["base"], f["change"]))
+    report.append("")
+    report.append("## CLI-style view (Batfish evidence rendered like "
+                  "router output — NOT actual device output)")
+    report.append("")
+    report.append("```")
+    report.append(render_cli(routes, flows))
+    report.append("```")
     report.append("")
     report.append("---")
     report.append("")

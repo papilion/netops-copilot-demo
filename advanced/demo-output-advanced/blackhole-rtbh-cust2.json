@@ -347,5 +347,6 @@
       "cost_usd_estimate": 0.008958
     }
   },
-  "total_cost_usd_estimate": 0.0159
+  "total_cost_usd_estimate": 0.0159,
+  "cli_view": "CLI-style view — Batfish evidence rendered like router output. NOT actual device output: no router was connected and no command was run on a device. Admin distance and metric are not reported by Batfish, so they are omitted here (shown as nothing, never invented). Interface names, uptime and BGP session state are likewise not reported and are never shown.\n\nRoutes (changed watched routes only; UNCHANGED routes omitted):\n  (no watched route changed)\n\nFlows (traceroute-style result; no hop list reported):\n  coreA1 -> 198.51.100.130: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreA1 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreA2 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreB1 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreB1 -> 203.0.113.130: DELIVERED_TO_SUBNET -> NULL_ROUTED (CHANGED)\n  coreB2 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)"
 }

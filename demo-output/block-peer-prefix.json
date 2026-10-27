@@ -140,5 +140,6 @@
       "cost_usd_estimate": 0.007176
     }
   },
-  "total_cost_usd_estimate": 0.014778
+  "total_cost_usd_estimate": 0.014778,
+  "cli_view": "CLI-style view — Batfish evidence rendered like router output. NOT actual device output: no router was connected and no command was run on a device. Admin distance and metric are not reported by Batfish, so they are omitted here (shown as nothing, never invented). Interface names, uptime and BGP session state are likewise not reported and are never shown.\n\nRoutes (changed watched routes only; UNCHANGED routes omitted):\n  core1: i 198.51.100.128/25 — route LOST (was: ibgp via ip 192.0.2.3)\n  core2: i 198.51.100.128/25 — route LOST (was: ibgp via ip 192.0.2.3)\n  edge1: B 198.51.100.128/25 — route LOST (was: bgp via ip 198.51.100.2)\n\nFlows (traceroute-style result; no hop list reported):\n  core1 -> 198.51.100.130: DELIVERED_TO_SUBNET -> NO_ROUTE (CHANGED)\n  core1 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)"
 }

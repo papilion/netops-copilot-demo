@@ -66,6 +66,23 @@ edgeB1에서 203.0.113.130/32 피해 호스트에 대한 차단만 유지하고 
 - flow coreB1 -> 203.0.113.130: FLOW IMPACT (DELIVERED_TO_SUBNET -> NULL_ROUTED)
 - flow coreB2 -> 203.0.113.10: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
 
+## CLI-style view (Batfish evidence rendered like router output — NOT actual device output)
+
+```
+CLI-style view — Batfish evidence rendered like router output. NOT actual device output: no router was connected and no command was run on a device. Admin distance and metric are not reported by Batfish, so they are omitted here (shown as nothing, never invented). Interface names, uptime and BGP session state are likewise not reported and are never shown.
+
+Routes (changed watched routes only; UNCHANGED routes omitted):
+  (no watched route changed)
+
+Flows (traceroute-style result; no hop list reported):
+  coreA1 -> 198.51.100.130: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  coreA1 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  coreA2 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  coreB1 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  coreB1 -> 203.0.113.130: DELIVERED_TO_SUBNET -> NULL_ROUTED (CHANGED)
+  coreB2 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+```
+
 ---
 
 ### Batfish raw output

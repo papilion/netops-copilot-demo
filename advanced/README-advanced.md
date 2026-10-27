@@ -117,6 +117,23 @@ cost about $0.17 in total (plus about $0.02 for the RPKI
 re-run); that shows the step is cheap, not that it replaces
 engineering judgement.
 
+
+## Batfish vs real router commands (short version)
+
+Batfish never connects to a router; it simulates from a config
+snapshot. The mapping: `show ip route` -> routes question
+(network, protocol, next-hop); `show ip bgp` -> bgpRib;
+`show ip bgp summary` -> bgpSessionStatus (session up or down);
+`traceroute` / `ping` -> traceroute question
+(DELIVERED_TO_SUBNET = arrived, NO_ROUTE = no path,
+NULL_ROUTED = dropped to Null0); `show running-config` -> the
+parsed config snapshot. Each report carries a CLI-style view of
+the same evidence — Batfish evidence in CLI form, NOT output
+captured from a real router. What Batfish does NOT show: live
+interface state beyond the snapshot, CPU, ARP/MAC tables, or
+real-time traffic. Admin distance, metric, interface names,
+uptime and session state are omitted, never invented.
+
 ## Appendix — Details / honest notes
 
 - **AI role — the model never decides the verdict.** Batfish evidence decides ALLOW / BLOCK / REVIEW by fixed rules. The Meta model only (1) explains the verdict in plain language from the evidence JSON, and (2) proposes a next step or optimisation, which must be re-simulated before anyone trusts it. Each report carries it as "AI explanation / proposed next step (to be re-simulated — NOT the verdict)". The blackhole /32 (keep the drop on one host, never widen to the /25) is the optimisation example. Honest status: the 11 reports now carry real Meta Model API explanations (about $0.17 total, plus about $0.02 for the RPKI re-run); rule-based text is the fallback. The playground samples in the simple demo's `demo-output/playground-samples.md` are additional examples.

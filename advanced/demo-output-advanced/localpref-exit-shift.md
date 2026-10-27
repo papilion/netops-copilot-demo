@@ -69,6 +69,28 @@ Batfish 판정: REVIEW입니다. cust1(203.0.113.0/24)에 대해 edgeB1에서 LO
 - flow coreB1 -> 203.0.113.130: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
 - flow coreB2 -> 203.0.113.10: UNCHANGED (DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET)
 
+## CLI-style view (Batfish evidence rendered like router output — NOT actual device output)
+
+```
+CLI-style view — Batfish evidence rendered like router output. NOT actual device output: no router was connected and no command was run on a device. Admin distance and metric are not reported by Batfish, so they are omitted here (shown as nothing, never invented). Interface names, uptime and BGP session state are likewise not reported and are never shown.
+
+Routes (changed watched routes only; UNCHANGED routes omitted):
+  corea1: i 203.0.113.0/24 via 192.0.2.7 — NEXT-HOP CHANGED (was: ibgp via ip 192.0.2.4)
+  corea2: i 203.0.113.0/24 via 192.0.2.7 — NEXT-HOP CHANGED (was: ibgp via ip 192.0.2.4)
+  coreb1: i 203.0.113.0/24 via 192.0.2.7 — NEXT-HOP CHANGED (was: ibgp via ip 192.0.2.4)
+  coreb2: i 203.0.113.0/24 via 192.0.2.7 — NEXT-HOP CHANGED (was: ibgp via ip 192.0.2.4)
+  edgea1: i 203.0.113.0/24 via 192.0.2.7 — NEXT-HOP CHANGED (was: ibgp via ip 192.0.2.4)
+  edgea2: i 203.0.113.0/24 via 192.0.2.7 — NEXT-HOP CHANGED (was: bgp via ip 198.51.100.6)
+
+Flows (traceroute-style result; no hop list reported):
+  coreA1 -> 198.51.100.130: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  coreA1 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  coreA2 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  coreB1 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  coreB1 -> 203.0.113.130: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+  coreB2 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)
+```
+
 ---
 
 ### Batfish raw output
