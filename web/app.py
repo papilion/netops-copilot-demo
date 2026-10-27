@@ -192,6 +192,18 @@ def validate_advanced(name, mode, lang="ko"):
         invalid_announcement=scenario.get("invalid_announcement"))
     explanation = copilot.local_explanation(
         scenario, verdict, violations, notes, routes, flows, lang)
+    explanation_source = "local-template (no API call)"
+    api_key = os.environ.get("META_API_KEY", "").strip()
+    if api_key:
+        model = os.environ.get("META_MODEL", copilot.DEFAULT_MODEL)
+        try:
+            model_text, _usage, _cost = copilot.meta_explanation(
+                api_key, model, scenario, verdict, violations, notes, lang)
+        except Exception:
+            model_text = None
+        if model_text:
+            explanation = model_text
+            explanation_source = "Meta Model API (%s)" % model
     proposal = advanced_mod.propose_next_step_advanced(
         name, verdict, violations, notes, lang)
     proposal, proposal_source = _meta_refine(
@@ -216,7 +228,7 @@ def validate_advanced(name, mode, lang="ko"):
         "unchanged_count": sum(1 for r in routes if r["verdict"] == "UNCHANGED")
         + sum(1 for f in flows if f["verdict"] == "UNCHANGED"),
         "explanation": explanation,
-        "explanation_source": "local-template (no API call)",
+        "explanation_source": explanation_source,
         "proposed_next_step": proposal,
         "proposed_next_step_source": proposal_source,
         "evidence_source": evidence_source,
