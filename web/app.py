@@ -33,6 +33,9 @@ Run:
   WEB_PORT=8080 python3 web/app.py
 
 Live Batfish (one at a time):
+  bash scripts/start-live.sh        (Codespaces / clone: starts the
+                                     Batfish container, then this app)
+  or, on the original dev machine:
   ~/workspace/batfish-lab/start-batfish.sh
   ~/workspace/batfish-lab-advanced/start-batfish-advanced.sh
 """
@@ -56,8 +59,8 @@ _spec = importlib.util.spec_from_file_location(
 advanced_mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(advanced_mod)
 
-SIMPLE_START = "~/workspace/batfish-lab/start-batfish.sh"
-ADVANCED_START = "~/workspace/batfish-lab-advanced/start-batfish-advanced.sh"
+SIMPLE_START = "bash scripts/start-live.sh  (starts the Batfish container, then this app)"
+ADVANCED_START = "bash scripts/start-live.sh  (starts the Batfish container, then this app)"
 
 VERDICT_MEANING = {
     "ALLOW": "GREEN — every watched customer and partner road still works. "

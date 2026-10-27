@@ -95,7 +95,7 @@ class WebAppTest(unittest.TestCase):
         finally:
             web_app.copilot.run_batfish = orig
         self.assertEqual(status, 503)
-        self.assertIn("start-batfish.sh", data["start_command"])
+        self.assertIn("start-live.sh", data["start_command"])
         self.assertNotIn("verdict", data)
 
     def test_live_mock_only_scenario_is_rejected(self):

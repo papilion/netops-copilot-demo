@@ -296,55 +296,61 @@
       "change": "DELIVERED_TO_SUBNET"
     }
   ],
-  "explanation": "coreA1-edgeA1 링크 셧다운에 대한 Batfish 시뮬레이션 결과입니다. 의도한 coreA2 경유 우회와 감시 대상 플로우 유지 조건을 확인했습니다. 위반 사항이 없으며 최종 판정은 ALLOW 입니다. 별도 메모는 없습니다.",
-  "proposed_next_step": "Batfish 결과는 ALLOW이며, 감시 범위 내에서는 coreA1-edgeA1 링크 차단 시에도 감시 대상 flow가 깨지지 않아 안전한 변경으로 보입니다. 믿기 전에 반드시 시뮬레이션으로 검증하고, 적용 후에도 다시 확인하세요.",
+  "explanation": "coreA1-edgeA1 링크 shutdown에 대한 Batfish 시뮬레이션 결과를 보고드립니다. 의도는 해당 링크를 차단하고 coreA2 경유 우회와 감시 대상 플로우 유지를 확인하는 것입니다. 위반 사항은 보고되지 않았습니다. 별도 참고 사항도 없습니다. 판정은 ALLOW입니다.",
+  "proposed_next_step": "coreA1-edgeA1 링크 차단 변경은 Batfish ALLOW 판정으로 감시 대상 flow가 모두 유지되어 coreA2 우회 의도를 만족합니다. 적용하기 전과 후에 반드시 시뮬레이션으로 검증해야 하며 이 제안을 그대로 신뢰하지 마세요.",
   "proposed_next_step_source": "Meta Model API (muse-spark-1.3)",
   "evidence_source": "batfish-live-advanced",
+  "control_routes": null,
+  "control_flows": null,
+  "protected_routes": null,
+  "protected_flows": null,
   "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)",
+  "cli_view": "CLI-style view — Batfish evidence rendered like router output. NOT actual device output: no router was connected and no command was run on a device. Admin distance and metric are not reported by Batfish, so they are omitted here (shown as nothing, never invented). Interface names, uptime and BGP session state are likewise not reported and are never shown.\n\nRoutes (changed watched routes only; UNCHANGED routes omitted):\n  (no watched route changed)\n\nFlows (traceroute-style result; no hop list reported):\n  coreA1 -> 198.51.100.130: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreA1 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreA2 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreB1 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreB1 -> 203.0.113.130: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreB2 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)",
   "explanation_source": "Meta Model API (muse-spark-1.3)",
   "model": "muse-spark-1.3",
   "usage": {
-    "completion_tokens": 1355,
+    "completion_tokens": 1340,
     "prompt_tokens": 130,
-    "total_tokens": 1485,
+    "total_tokens": 1470,
     "completion_tokens_details": {
-      "reasoning_tokens": 1282
+      "reasoning_tokens": 1263
     },
     "prompt_tokens_details": {
       "cached_tokens": 0
     }
   },
-  "cost_usd_estimate": 0.005921,
-  "api_calls": {
-    "explanation": {
+  "cost_usd_estimate": 0.005857,
+  "total_cost_usd_estimate": 0.012274,
+  "api_calls": [
+    {
+      "prompt": "explanation",
       "usage": {
-        "completion_tokens": 1355,
+        "completion_tokens": 1340,
         "prompt_tokens": 130,
-        "total_tokens": 1485,
+        "total_tokens": 1470,
         "completion_tokens_details": {
-          "reasoning_tokens": 1282
+          "reasoning_tokens": 1263
         },
         "prompt_tokens_details": {
           "cached_tokens": 0
         }
       },
-      "cost_usd_estimate": 0.005921
+      "max_tokens": 3000
     },
-    "proposal_refinement": {
+    {
+      "prompt": "proposal",
       "usage": {
-        "completion_tokens": 1505,
-        "prompt_tokens": 203,
-        "total_tokens": 1708,
+        "completion_tokens": 1444,
+        "prompt_tokens": 224,
+        "total_tokens": 1668,
         "completion_tokens_details": {
-          "reasoning_tokens": 1439
+          "reasoning_tokens": 1376
         },
         "prompt_tokens_details": {
           "cached_tokens": 0
         }
       },
-      "cost_usd_estimate": 0.00665
+      "max_tokens": 3000
     }
-  },
-  "total_cost_usd_estimate": 0.012571,
-  "cli_view": "CLI-style view — Batfish evidence rendered like router output. NOT actual device output: no router was connected and no command was run on a device. Admin distance and metric are not reported by Batfish, so they are omitted here (shown as nothing, never invented). Interface names, uptime and BGP session state are likewise not reported and are never shown.\n\nRoutes (changed watched routes only; UNCHANGED routes omitted):\n  (no watched route changed)\n\nFlows (traceroute-style result; no hop list reported):\n  coreA1 -> 198.51.100.130: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreA1 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreA2 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreB1 -> 198.51.100.200: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreB1 -> 203.0.113.130: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)\n  coreB2 -> 203.0.113.10: DELIVERED_TO_SUBNET -> DELIVERED_TO_SUBNET (unchanged)"
+  ]
 }

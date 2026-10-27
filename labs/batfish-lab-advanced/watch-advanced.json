@@ -1,0 +1,71 @@
+{
+  "comment": "Advanced watch list (fictional samples, RFC 5737). Nodes are core/edge only; rr1 is infrastructure, not a watched endpoint.",
+  "nodes": [
+    "coreA1",
+    "coreA2",
+    "edgeA1",
+    "edgeA2",
+    "coreB1",
+    "coreB2",
+    "edgeB1"
+  ],
+  "prefixes": [
+    {
+      "network": "192.0.2.0/24",
+      "note": "own aggregate originated at edgeA1",
+      "origin_as": 64496
+    },
+    {
+      "network": "198.51.100.128/25",
+      "note": "peer1 prefix via edgeA1",
+      "origin_as": 64497
+    },
+    {
+      "network": "198.51.100.192/26",
+      "note": "peer2 prefix via edgeB1",
+      "origin_as": 64499
+    },
+    {
+      "network": "203.0.113.0/24",
+      "note": "cust1 prefix via edgeA2 and edgeB1 (dual-homed)",
+      "origin_as": 64498
+    },
+    {
+      "network": "203.0.113.128/25",
+      "note": "cust2 prefix via edgeB1",
+      "origin_as": 64500
+    }
+  ],
+  "flows": [
+    {
+      "start_node": "coreA1",
+      "dst_ip": "203.0.113.10",
+      "note": "coreA -> cust1 prefix"
+    },
+    {
+      "start_node": "coreA1",
+      "dst_ip": "198.51.100.130",
+      "note": "coreA -> peer1 prefix"
+    },
+    {
+      "start_node": "coreB1",
+      "dst_ip": "203.0.113.130",
+      "note": "coreB -> cust2 prefix"
+    },
+    {
+      "start_node": "coreB1",
+      "dst_ip": "198.51.100.200",
+      "note": "coreB -> peer2 prefix"
+    },
+    {
+      "start_node": "coreA2",
+      "dst_ip": "198.51.100.200",
+      "note": "coreA -> peer2 prefix (cross-region)"
+    },
+    {
+      "start_node": "coreB2",
+      "dst_ip": "203.0.113.10",
+      "note": "coreB -> cust1 prefix (cross-region)"
+    }
+  ]
+}

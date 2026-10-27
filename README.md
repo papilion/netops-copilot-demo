@@ -74,6 +74,10 @@ python3 mcp_server.py   # tools: list_scenarios, validate_change, get_policy
 
 This demo never **applies** a change. It only returns a verdict.
 
+## Try it live, no local install: GitHub Codespaces
+
+Open this repo on github.com, click **Code > Codespaces > Create codespace**, wait for setup, then open the forwarded port **8000**. Select **Advanced**, select a scenario, set mode **Live**, and click **Run**. No WSL, no manual Java or jar setup: the codespace installs Python + pybatfish and starts the official Batfish image (`batfish/allinone`, port 9996) automatically; see `web/README.md` for the exact clicks and the one fallback if Docker is unavailable in the codespace. Lab configs now live in this repo under `labs/` (simple + advanced, fictional sample data only).
+
 ## Advanced version
 
 A large lab with 13 nodes, 2 regions, and a route reflector lives in `advanced/`.

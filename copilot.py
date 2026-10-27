@@ -49,9 +49,41 @@ import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-LAB = Path.home() / "workspace" / "batfish-lab"
+
+
+def _resolve_lab():
+    """Lab folder: env override, else labs/ in this repo, else legacy path.
+
+    A clone (e.g. a GitHub Codespace) contains labs/batfish-lab, so live
+    runs work without the old ~/workspace layout. The legacy path stays
+    as a fallback for the original development machine.
+    """
+    env = os.environ.get("NETOPS_SIMPLE_LAB")
+    if env:
+        return Path(env)
+    repo_lab = HERE / "labs" / "batfish-lab"
+    if (repo_lab / "snapshot").exists():
+        return repo_lab
+    return Path.home() / "workspace" / "batfish-lab"
+
+
+def _python_with_pybatfish(lab):
+    # Lab venv first, then the original dev machine's venv, then the
+    # current interpreter (a Codespace installs pybatfish system-wide).
+    candidates = [
+        lab / "venv" / "bin" / "python",
+        Path.home() / "workspace" / "batfish-lab" / "venv" / "bin" / "python",
+        Path(sys.executable),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return Path(sys.executable)
+
+
+LAB = _resolve_lab()
 VALIDATE = LAB / "harness" / "validate.py"
-LAB_VENV_PYTHON = LAB / "venv" / "bin" / "python"
+LAB_VENV_PYTHON = _python_with_pybatfish(LAB)
 OUT_DIR = HERE / "demo-output"
 DATA_DIR = HERE / "demo-data"
 

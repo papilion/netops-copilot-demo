@@ -34,9 +34,27 @@ DEMO = HERE.parent
 sys.path.insert(0, str(DEMO))
 import copilot  # noqa: E402  (reuse parse_impact, local_explanation, Meta helpers)
 
-ADV_LAB = Path.home() / "workspace" / "batfish-lab-advanced"
-SIMPLE_LAB = Path.home() / "workspace" / "batfish-lab"
-ADV_VENV_PYTHON = SIMPLE_LAB / "venv" / "bin" / "python"  # pybatfish lives here
+def _resolve_lab(env_name, repo_name, legacy):
+    """Lab folder: env override, else labs/ in this repo, else legacy path."""
+    env = os.environ.get(env_name)
+    if env:
+        return Path(env)
+    repo_lab = DEMO / "labs" / repo_name
+    if (repo_lab / "snapshot").exists():
+        return repo_lab
+    return Path.home() / "workspace" / legacy
+
+
+ADV_LAB = _resolve_lab("NETOPS_ADV_LAB", "batfish-lab-advanced",
+                       "batfish-lab-advanced")
+SIMPLE_LAB = _resolve_lab("NETOPS_SIMPLE_LAB", "batfish-lab", "batfish-lab")
+_candidates = [
+    SIMPLE_LAB / "venv" / "bin" / "python",
+    Path.home() / "workspace" / "batfish-lab" / "venv" / "bin" / "python",
+    Path(sys.executable),
+]
+ADV_VENV_PYTHON = next(
+    (c for c in _candidates if c.exists()), Path(sys.executable))
 ADV_VALIDATE = ADV_LAB / "harness" / "validate.py"
 ADV_WATCH = ADV_LAB / "watch-advanced.json"
 ADV_SNAPSHOT = ADV_LAB / "snapshot"

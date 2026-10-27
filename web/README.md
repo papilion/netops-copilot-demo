@@ -6,7 +6,35 @@ parsing, CLI rendering and proposal helpers from `copilot.py` and
 `advanced/advanced.py` — it does not duplicate the policy and it does
 not write demo-output report files.
 
-## Run
+## Simplest way: GitHub Codespaces (no local install)
+
+No WSL, no manual Java or jar setup. The lab configs are in this
+repo under `labs/`, and the codespace provides Python, Java,
+pybatfish, and the Batfish service.
+
+1. Open https://github.com/papilion/netops-copilot-demo on github.com.
+2. Click the green **Code** button, then the **Codespaces** tab, then
+   **Create codespace** (on branch `main`).
+3. Wait for setup to finish. The first build pulls the official
+   Batfish image (`batfish/allinone`) and can take several minutes;
+   `scripts/start-live.sh` then starts Batfish on port 9996 and this
+   web app on port 8000.
+4. In the Codespaces **Ports** tab, open the forwarded port **8000**
+   (keep its visibility **Private** — do not make it Public).
+5. In the web UI, select topology **Advanced**, select a scenario,
+   set mode **Live**, and click **Run**.
+
+If Live mode returns HTTP 503, Batfish is not up yet: wait a minute
+and try again, or run `bash scripts/start-live.sh` in the codespace
+terminal. If Docker is unavailable in the codespace, the only manual
+step is `docker run -d --name batfish -p 9996:9996 batfish/allinone`
+followed by `bash scripts/start-live.sh`; recorded mode works with
+no Batfish at all. A real Codespaces boot was not run from the
+machine that built this repo, so the first creation is the proof run
+— see `.devcontainer/README.md` for exactly what is automatic and
+what is not yet verified.
+
+## Run (local clone)
 
 ```text
 python3 web/app.py
@@ -24,11 +52,13 @@ python3 web/app.py
   and does NOT silently fall back to recorded. The UI shows the error
   and offers the recorded-replay button instead.
 
-## Live Batfish (one at a time)
+## Fallback: local PC (WSL) — live Batfish (one at a time)
 
-The simple lab and the advanced lab share Batfish port 9996, so only
-one Batfish service runs at a time. Stop one before starting the other.
-This server never auto-starts Batfish.
+If you are not using Codespaces, run Batfish yourself (WSL on
+Windows, since the lab paths are Linux-style). The simple lab and
+the advanced lab share Batfish port 9996, so only one Batfish
+service runs at a time. Stop one before starting the other. This
+server never auto-starts Batfish.
 
 ```text
 ~/workspace/batfish-lab/start-batfish.sh
