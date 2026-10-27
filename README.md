@@ -78,6 +78,8 @@ This demo never **applies** a change. It only returns a verdict.
 
 Open this repo on github.com, click **Code > Codespaces > Create codespace**, wait for setup, then open the forwarded port **8000**. Select **Advanced**, select a scenario, set mode **Live**, and click **Run**. No WSL, no manual Java or jar setup: the codespace installs Python + pybatfish and starts the official Batfish image (`batfish/allinone`, port 9996) automatically; see `web/README.md` for the exact clicks and the one fallback if Docker is unavailable in the codespace. Lab configs now live in this repo under `labs/` (simple + advanced, fictional sample data only).
 
+For a full first-timer walkthrough in Korean — creation, the globe icon, restart vs. new, stop/delete, costs, region, Meta API key, and troubleshooting — see [docs/CODESPACES-GUIDE.ko.md](docs/CODESPACES-GUIDE.ko.md).
+
 ## Advanced version
 
 A large lab with 13 nodes, 2 regions, and a route reflector lives in `advanced/`.

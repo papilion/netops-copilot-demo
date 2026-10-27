@@ -32,6 +32,16 @@ ISP 백본에서 BGP/OSPF 변경 하나가 잘못되면, 장애가 순식간에 
 감시 prefix 경로가 사라지거나 감시 flow가 중단(DENIED/NO_ROUTE/DROP)되면 BLOCK입니다.
 신규 경로가 생기거나 flow가 비치명적으로 바뀌면 REVIEW, next-hop만 바뀌고 flow가 전부 유지되면 ALLOW입니다.
 
+## Codespaces로 라이브 보기 (설치 불필요)
+
+GitHub 웹에서 저장소를 열고 **Code > Codespaces > Create codespace**를
+누른 뒤, PORTS 탭에서 포트 **8000**의 지구본 아이콘을 클릭하면 웹 앱이
+열립니다. 처음 만드는 데는 10~15분이 걸리고, 다음부터는 기존
+Codespace 이름을 클릭하면 2~5분이면 됩니다. 처음 쓰는 사람을 위한
+자세한 사용법(지구본, 다시 열기/멈추기/지우기, 요금, 지역, Meta AI 키,
+문제 해결)은 [docs/CODESPACES-GUIDE.ko.md](docs/CODESPACES-GUIDE.ko.md)를
+보세요.
+
 ## 실행
 
 ```bash
