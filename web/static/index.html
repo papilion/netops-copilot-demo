@@ -23,57 +23,146 @@ img.topo { max-width: 100%; border: 1px solid #ccc; }
 </style>
 </head>
 <body>
-<h1>NetOps Copilot — 변경 검증 (Change Validation)</h1>
-<p>백본 설정을 바꾸기 전에, 가상 네트워크(Batfish 디지털 트윈)에서 먼저 돌려보고 판정을 받습니다.
+<h1 id="pageTitle">NetOps Copilot — 변경 검증 (Change Validation)</h1>
+<p id="intro">백본 설정을 바꾸기 전에, 가상 네트워크(Batfish 디지털 트윈)에서 먼저 돌려보고 판정을 받습니다.
 판정은 신호등 3개뿐입니다: <b>🟢 ALLOW(바꿔도 됨) / 🟡 REVIEW(사람 확인) / 🔴 BLOCK(바꾸면 안 됨)</b>.
 이 도구는 판정만 내립니다. 설정을 라우터에 적용하지 않으며, 결정은 사람이 합니다.</p>
 
-<label>토폴로지 / Topology:
+<label>언어 / Language:
+<select id="lang">
+  <option value="ko">한국어</option>
+  <option value="en">English</option>
+</select></label>
+
+<label><span id="topoLabel">토폴로지 / Topology:</span>
 <select id="group">
   <option value="simple">단순 데모 (5 nodes)</option>
   <option value="advanced">고급 랩 (13 nodes)</option>
 </select></label>
 <p><img id="topo" class="topo" src="/docs/topology-simple.png" alt="Topology diagram"></p>
 
-<label>시나리오 / Scenario:
+<label><span id="scenarioLabel">시나리오 / Scenario:</span>
 <select id="scenario"></select></label>
 <p id="intent"></p>
 
-<label><input type="radio" name="mode" value="recorded" checked> Recorded replay (기록 재생 — Batfish 서버 없이 동작)</label>
-<label><input type="radio" name="mode" value="live"> Live (실시간 Batfish, 포트 9996)</label>
+<label><input type="radio" name="mode" value="recorded" checked> <span id="modeRecorded">Recorded replay (기록 재생 — Batfish 서버 없이 동작)</span></label>
+<label><input type="radio" name="mode" value="live"> <span id="modeLive">Live (실시간 Batfish, 포트 9996)</span></label>
 <button id="run">검증 실행 / Run validation</button>
 
 <div id="error" class="warn" style="display:none"></div>
 <div id="result" style="display:none">
-  <h2>판정 / Verdict: <span id="verdict" class="pill"></span></h2>
+  <h2><span id="verdictHeading">판정 / Verdict:</span> <span id="verdict" class="pill"></span></h2>
   <p id="meaning"></p>
-  <p><b>증거 출처 / Evidence source:</b> <span id="source"></span></p>
-  <h3>설명 / Explanation</h3>
+  <p><b><span id="sourceLabel">증거 출처 / Evidence source:</span></b> <span id="source"></span></p>
+  <h3 id="explanationHeading">설명 / Explanation</h3>
   <p id="explanation"></p>
   <p><small id="expsource"></small></p>
-  <h3>제안하는 다음 단계 / Proposed next step (재시뮬레이션 필요 — 판정이 아님)</h3>
+  <h3 id="proposalHeading">제안하는 다음 단계 / Proposed next step (재시뮬레이션 필요 — 판정이 아님)</h3>
   <p id="proposal"></p>
   <p><small id="propsource"></small></p>
-  <h3>변경된 증거 / Changed evidence</h3>
+  <h3 id="evidenceHeading">변경된 증거 / Changed evidence</h3>
   <p id="counts"></p>
-  <table id="evidence"><thead><tr><th>종류</th><th>대상</th><th>판정</th><th>변경 전 → 변경 후</th></tr></thead><tbody></tbody></table>
-  <h3>CLI 형태 보기 / CLI-style view</h3>
-  <div class="note">Batfish 증거를 CLI 형태로 그린 것입니다. 실제 라우터 출력이 아닙니다 — 어떤 라우터에도 접속하지 않았고, 어떤 명령어도 실행하지 않았습니다.
+  <table id="evidence"><thead><tr><th id="thKind">종류</th><th id="thTarget">대상</th><th id="thVerdict">판정</th><th id="thChange">변경 전 → 변경 후</th></tr></thead><tbody></tbody></table>
+  <h3 id="cliHeading">CLI 형태 보기 / CLI-style view</h3>
+  <div class="note" id="cliNote">Batfish 증거를 CLI 형태로 그린 것입니다. 실제 라우터 출력이 아닙니다 — 어떤 라우터에도 접속하지 않았고, 어떤 명령어도 실행하지 않았습니다.
   Batfish evidence rendered like router output — NOT actual device output.</div>
   <pre id="cliview"></pre>
 </div>
 
 <footer>
-<p><b>Live 사용법:</b> 단순 랩과 고급 랩은 Batfish 포트 9996을 공유하므로 한 번에 하나만 실행하세요.
+<p id="liveHelp"><b>Live 사용법:</b> 단순 랩과 고급 랩은 Batfish 포트 9996을 공유하므로 한 번에 하나만 실행하세요.
 단순: <code>~/workspace/batfish-lab/start-batfish.sh</code> / 고급: <code>~/workspace/batfish-lab-advanced/start-batfish-advanced.sh</code>.
 이 웹 서버는 Batfish를 자동으로 시작하지 않습니다. Live 요청 시 Batfish가 없으면 오류를 보여주고, 기록 재생으로 돌리지 않습니다.</p>
-<p><b>보안 / Scope:</b> 이 데모 서버는 로컬 전용(127.0.0.1)이며 인증이 없습니다. 인터넷이나 공유 네트워크에 노출하지 마세요.
+<p id="scopeHelp"><b>보안 / Scope:</b> 이 데모 서버는 로컬 전용(127.0.0.1)이며 인증이 없습니다. 인터넷이나 공유 네트워크에 노출하지 마세요.
 데모 데이터는 전부 가짜입니다 (RFC 5737, AS 64496–64501). 실제 운영 설정을 공개 데모에 붙여넣지 마세요.
 AI는 판정을 내리지 않습니다. 판정은 Batfish 증거로만 정해지고, 모델은 설명과 제안만 합니다.</p>
 </footer>
 
 <script>
 let scenarios = [];
+let uiLang = 'ko';
+const UI = {
+  ko: {
+    pageTitle: 'NetOps Copilot — 변경 검증 (Change Validation)',
+    intro: '백본 설정을 바꾸기 전에, 가상 네트워크(Batfish 디지털 트윈)에서 먼저 돌려보고 판정을 받습니다. 판정은 신호등 3개뿐입니다: 🟢 ALLOW(바꿔도 됨) / 🟡 REVIEW(사람 확인) / 🔴 BLOCK(바꾸면 안 됨). 이 도구는 판정만 내립니다. 설정을 라우터에 적용하지 않으며, 결정은 사람이 합니다.',
+    topoLabel: '토폴로지 / Topology:', simpleOpt: '단순 데모 (5 nodes)', advancedOpt: '고급 랩 (13 nodes)',
+    scenarioLabel: '시나리오 / Scenario:', modeRecorded: 'Recorded replay (기록 재생 — Batfish 서버 없이 동작)', modeLive: 'Live (실시간 Batfish, 포트 9996)',
+    run: '검증 실행 / Run validation', running: '실행 중…',
+    verdictHeading: '판정 / Verdict:', sourceLabel: '증거 출처 / Evidence source:',
+    explanationHeading: '설명 / Explanation', proposalHeading: '제안하는 다음 단계 / Proposed next step (재시뮬레이션 필요 — 판정이 아님)',
+    evidenceHeading: '변경된 증거 / Changed evidence', thKind: '종류', thTarget: '대상', thVerdict: '판정', thChange: '변경 전 → 변경 후',
+    cliHeading: 'CLI 형태 보기 / CLI-style view',
+    cliNote: 'Batfish 증거를 CLI 형태로 그린 것입니다. 실제 라우터 출력이 아닙니다 — 어떤 라우터에도 접속하지 않았고, 어떤 명령어도 실행하지 않았습니다. Batfish evidence rendered like router output — NOT actual device output.',
+    liveHelp: 'Live 사용법: 단순 랩과 고급 랩은 Batfish 포트 9996을 공유하므로 한 번에 하나만 실행하세요. 단순: ~/workspace/batfish-lab/start-batfish.sh / 고급: ~/workspace/batfish-lab-advanced/start-batfish-advanced.sh. 이 웹 서버는 Batfish를 자동으로 시작하지 않습니다. Live 요청 시 Batfish가 없으면 오류를 보여주고, 기록 재생으로 돌리지 않습니다.',
+    scopeHelp: '보안 / Scope: 이 데모 서버는 로컬 전용(127.0.0.1)이며 인증이 없습니다. 인터넷이나 공유 네트워크에 노출하지 마세요. 데모 데이터는 전부 가짜입니다 (RFC 5737, AS 64496–64501). 실제 운영 설정을 공개 데모에 붙여넣지 마세요. AI는 판정을 내리지 않습니다. 판정은 Batfish 증거로만 정해지고, 모델은 설명과 제안만 합니다.',
+    intentPrefix: '의도 / Intent: ', liveOnly: ' (live 없음 — 기록 재생 전용)',
+    route: '경로 / Route', flow: '트래픽 / Flow', errorPrefix: '오류 / Error: ', startCmd: '시작 명령 / Start command: ', retryRecorded: '기록 재생 모드로 다시 실행해 보세요.',
+    requestFailed: '요청 실패: ', sourcePrefix: '출처 / Source: ', metaNote: ' — Meta API not configured on this server (규칙 기반 설명입니다).',
+    counts: (r, f, u) => '변경된 경로 ' + r + '개, 변경된 트래픽 ' + f + '개, 변경 없음 ' + u + '개 (감시 범위 내).',
+    meaning: {ALLOW: 'GREEN — 감시 대상 고객·파트너 도로가 모두 그대로 동작합니다. 감시 범위 내에서만 바꿔도 안전합니다.', BLOCK: 'RED — 감시 대상 도로가 끊겼거나, 유효하지 않은 발표를 거부해야 합니다. 제안대로 바꾸지 마세요.', REVIEW: 'YELLOW — 새 도로가 생겼거나, 트래픽이 다른 출구로 옮겼거나, 의도한 차단(블랙홀)인지 사람이 확인해야 합니다.'}
+  },
+  en: {
+    pageTitle: 'NetOps Copilot — Change Validation',
+    intro: 'Before changing backbone settings, simulate the change in a virtual network (Batfish digital twin) and get a verdict. Only three traffic lights: 🟢 ALLOW (safe to change) / 🟡 REVIEW (human check) / 🔴 BLOCK (do not change). This tool only validates; it never applies a change to a router, and a human decides.',
+    topoLabel: 'Topology:', simpleOpt: 'Simple demo (5 nodes)', advancedOpt: 'Advanced lab (13 nodes)',
+    scenarioLabel: 'Scenario:', modeRecorded: 'Recorded replay (works without a Batfish server)', modeLive: 'Live (real-time Batfish, port 9996)',
+    run: 'Run validation', running: 'Running…',
+    verdictHeading: 'Verdict:', sourceLabel: 'Evidence source:',
+    explanationHeading: 'Explanation', proposalHeading: 'Proposed next step (re-simulate first — not the verdict)',
+    evidenceHeading: 'Changed evidence', thKind: 'Kind', thTarget: 'Target', thVerdict: 'Verdict', thChange: 'Before → After',
+    cliHeading: 'CLI-style view',
+    cliNote: 'Batfish evidence rendered like router output — NOT actual device output. No router was connected and no command was run on a device.',
+    liveHelp: 'Live usage: the simple and advanced labs share Batfish port 9996, so run only one at a time. Simple: ~/workspace/batfish-lab/start-batfish.sh / Advanced: ~/workspace/batfish-lab-advanced/start-batfish-advanced.sh. This web server never starts Batfish automatically. If Batfish is absent on a Live request, it shows an error and does not fall back to recorded replay.',
+    scopeHelp: 'Scope / security: this demo server is local-only (127.0.0.1) with no authentication. Do not expose it to the internet or a shared network. All demo data is fictional (RFC 5737, AS 64496–64501). Never paste real production settings into a public demo. AI never decides the verdict: the verdict comes only from Batfish evidence, and the model only explains and proposes.',
+    intentPrefix: 'Intent: ', liveOnly: ' (no live — recorded replay only)',
+    route: 'Route', flow: 'Flow', errorPrefix: 'Error: ', startCmd: 'Start command: ', retryRecorded: 'Try again in Recorded replay mode.',
+    requestFailed: 'Request failed: ', sourcePrefix: 'Source: ', metaNote: ' — Meta API not configured on this server (rule-based explanation).',
+    counts: (r, f, u) => r + ' changed routes, ' + f + ' changed flows, ' + u + ' unchanged (within watched scope).',
+    meaning: {ALLOW: 'GREEN — every watched customer and partner road still works. Safe to change, within the watched roads only.', BLOCK: 'RED — a watched road is broken, or an invalid announcement must be rejected. Do not change as proposed.', REVIEW: 'YELLOW — a new road appeared, traffic moved to another exit, or an intended drop (blackhole) needs a human to confirm it was intended.'}
+  }
+};
+const KO_SCENARIO = {
+  'ospf-cost-shift': ['OSPF 비용 변경: core1 → edge1 링크 비용 10 → 100', 'core1이 edge1에 직접 가지 않고 core2를 경유하도록 트래픽을 옮깁니다. 감시 대상 prefix나 flow가 깨지면 안 됩니다.'],
+  'block-peer-prefix': ['BGP 인바운드 필터: edge1에서 peer1의 peer prefix 198.51.100.128/25 거부', 'peer1(AS64497)으로부터 들어오는 peer prefix 198.51.100.128/25를 차단합니다.'],
+  'add-customer-prefix': ['새 고객 prefix 추가: edge1에 203.0.113.128/25 등장', '기존 감시 대상 prefix나 flow를 건드리지 않고 가상의 새 고객 prefix 203.0.113.128/25를 발표합니다. 새 경로는 사람이 의도한 발표인지 확인해야 하므로 ALLOW가 아니라 REVIEW여야 합니다.'],
+  'link-failure-coreA1-edgeA1': ['링크 장애: coreA1-edgeA1 링크 다운', 'coreA1-edgeA1 링크를 끕니다. 트래픽은 coreA2 경유로 우회해야 하고, 감시 대상 flow가 모두 살아남아야 합니다.'],
+  'bgp-session-down-peer1': ['eBGP 세션 다운: edgeA1-peer1 이웃 다운', 'edgeA1-peer1 eBGP 세션을 끕니다. peer1 prefix는 사라지고 그 flow는 끊겨야 하며, 고객 prefix는 그대로여야 합니다.'],
+  'localpref-exit-shift': ['LOCAL_PREF 출구 이동: edgeB1 경유 cust1 우선', 'edgeB1에서 cust1의 LOCAL_PREF를 200으로 올립니다. 모든 코어는 cust1 출구를 edgeA2에서 edgeB1으로 옮겨야 하고, 모든 flow가 살아남아야 합니다.'],
+  'hijack-customer-prefix': ['More-specific 하이재킹: peer2가 203.0.113.0/25를 Null0으로 발표', 'peer2가 cust1의 /24보다 더 구체적인 prefix를 발표합니다. 203.0.113.10으로 가는 트래픽은 peer2의 Null0으로 빠져 끊겨야 합니다.'],
+  'rr-failure': ['라우트 리플렉터 장애: rr1 인터페이스 다운', 'rr1을 끕니다. iBGP 클라이언트는 리플렉션된 경로를 잃어야 하고, 감시 대상 flow가 모두 끊겨야 합니다.'],
+  'blackhole-rtbh-cust2': ['DDoS 블랙홀 (RTBH): edgeB1에서 피해 호스트 203.0.113.130/32만 차단', 'cust2 대상 DDoS 완화입니다. edgeB1에서 피해 호스트 203.0.113.130/32만 차단합니다(/32 Null0 경로, RTBH 트리거가 설치하는 전달 효과). DDoS는 보통 한 호스트를 노리므로 /32만 블랙홀하고, cust2 /25 전체를 블랙홀하지 않습니다. /25 전체를 차단하면 같은 prefix의 무고한 호스트까지 죽습니다.'],
+  'rpki-invalid-origin': ['RPKI 무효 origin: peer2가 cust1 203.0.113.0/25 발표 (ROA: 203.0.113.0/24, AS64498, maxLength 24)', 'RPKI origin 검증, route-map 강제 적용으로 라이브 검증합니다(정직한 분리): Batfish는 ROV 상태를 계산하지 않으므로, 검증 결정은 가상의 ROA 테이블(roas.json: 203.0.113.0/24 → AS64498만, maxLength 24)에서 오고, 강제 적용은 edgeB1의 실제 인바운드 route-map이 무효 발표를 거부하는 것입니다. peer2(AS64499)가 더 구체적인 203.0.113.0/25를 발표하면 두 가지로 무효입니다. origin AS64499 ≠ ROA AS64498이고, /25가 ROA maxLength 24를 넘습니다.'],
+  'aspath-prepend-deprefer': ['AS_PATH prepend 우선순위 낮추기: edgeA2 경유 cust1에 prepend', 'edgeA2에서 cust1에 AS64496을 두 번 prepend합니다. 모든 코어는 cust1 출구를 edgeB1으로 옮겨야 하고, 모든 flow가 살아남아야 합니다.']
+};
+function applyLang() {
+  uiLang = document.getElementById('lang').value;
+  document.documentElement.lang = uiLang;
+  const t = UI[uiLang];
+  document.getElementById('pageTitle').textContent = t.pageTitle;
+  document.getElementById('intro').textContent = t.intro;
+  document.getElementById('topoLabel').textContent = t.topoLabel;
+  document.getElementById('scenarioLabel').textContent = t.scenarioLabel;
+  document.getElementById('modeRecorded').textContent = t.modeRecorded;
+  document.getElementById('modeLive').textContent = t.modeLive;
+  document.getElementById('run').textContent = t.run;
+  document.getElementById('verdictHeading').textContent = t.verdictHeading;
+  document.getElementById('sourceLabel').textContent = t.sourceLabel;
+  document.getElementById('explanationHeading').textContent = t.explanationHeading;
+  document.getElementById('proposalHeading').textContent = t.proposalHeading;
+  document.getElementById('evidenceHeading').textContent = t.evidenceHeading;
+  document.getElementById('thKind').textContent = t.thKind;
+  document.getElementById('thTarget').textContent = t.thTarget;
+  document.getElementById('thVerdict').textContent = t.thVerdict;
+  document.getElementById('thChange').textContent = t.thChange;
+  document.getElementById('cliHeading').textContent = t.cliHeading;
+  document.getElementById('cliNote').textContent = t.cliNote;
+  document.getElementById('liveHelp').textContent = t.liveHelp;
+  document.getElementById('scopeHelp').textContent = t.scopeHelp;
+  const group = document.getElementById('group');
+  group.options[0].textContent = t.simpleOpt;
+  group.options[1].textContent = t.advancedOpt;
+  renderList();
+}
 async function load() {
   const r = await fetch('/api/scenarios');
   const data = await r.json();
@@ -88,65 +177,69 @@ function renderList() {
   scenarios.filter(s => s.group === group).forEach(s => {
     const o = document.createElement('option');
     o.value = s.name;
-    o.textContent = s.title + (s.live_supported ? '' : ' (live 없음 — 기록 재생 전용)');
+    const title = (uiLang === 'ko' && KO_SCENARIO[s.name]) ? KO_SCENARIO[s.name][0] : s.title;
+    o.textContent = title + (s.live_supported ? '' : UI[uiLang].liveOnly);
     sel.appendChild(o);
   });
   showIntent();
 }
 function showIntent() {
   const s = scenarios.find(x => x.name === document.getElementById('scenario').value);
-  document.getElementById('intent').textContent = s ? ('의도 / Intent: ' + s.intent) : '';
+  if (!s) { document.getElementById('intent').textContent = ''; return; }
+  const intent = (uiLang === 'ko' && KO_SCENARIO[s.name]) ? KO_SCENARIO[s.name][1] : s.intent;
+  document.getElementById('intent').textContent = UI[uiLang].intentPrefix + intent;
 }
 document.getElementById('group').addEventListener('change', renderList);
 document.getElementById('scenario').addEventListener('change', showIntent);
+document.getElementById('lang').addEventListener('change', applyLang);
 document.getElementById('run').addEventListener('click', async () => {
   const btn = document.getElementById('run');
   const err = document.getElementById('error');
   const res = document.getElementById('result');
-  btn.disabled = true; btn.textContent = '실행 중…';
+  const t = UI[uiLang];
+  btn.disabled = true; btn.textContent = t.running;
   err.style.display = 'none'; res.style.display = 'none';
   const mode = document.querySelector('input[name="mode"]:checked').value;
   try {
     const r = await fetch('/api/validate', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({scenario: document.getElementById('scenario').value, mode: mode, lang: 'ko'})
+      body: JSON.stringify({scenario: document.getElementById('scenario').value, mode: mode, lang: uiLang})
     });
     const data = await r.json();
     if (!r.ok) {
       err.style.display = 'block';
-      err.innerHTML = '<b>오류 / Error:</b> ' + (data.error || 'unknown') +
-        (data.start_command ? '<br>시작 명령 / Start command: <code>' + data.start_command + '</code><br>기록 재생 모드로 다시 실행해 보세요.' : '');
+      err.innerHTML = '<b>' + t.errorPrefix + '</b> ' + (data.error || 'unknown') +
+        (data.start_command ? '<br>' + t.startCmd + '<code>' + data.start_command + '</code><br>' + t.retryRecorded : '');
       return;
     }
     const v = document.getElementById('verdict');
     v.textContent = data.verdict; v.className = 'pill ' + data.verdict;
-    document.getElementById('meaning').textContent = data.verdict_meaning;
+    document.getElementById('meaning').textContent = t.meaning[data.verdict] || data.verdict_meaning;
     document.getElementById('source').textContent = data.evidence_source;
     document.getElementById('explanation').textContent = data.explanation;
-    document.getElementById('expsource').textContent = '출처 / Source: ' + data.explanation_source +
-      (data.meta_configured ? '' : ' — Meta API not configured on this server (규칙 기반 설명입니다).');
+    document.getElementById('expsource').textContent = t.sourcePrefix + data.explanation_source +
+      (data.meta_configured ? '' : t.metaNote);
     document.getElementById('proposal').textContent = data.proposed_next_step;
-    document.getElementById('propsource').textContent = '출처 / Source: ' + data.proposed_next_step_source;
-    document.getElementById('counts').textContent = '변경된 경로 ' + data.changed_routes.length + '개, 변경된 트래픽 ' +
-      data.changed_flows.length + '개, 변경 없음 ' + data.unchanged_count + '개 (감시 범위 내).';
+    document.getElementById('propsource').textContent = t.sourcePrefix + data.proposed_next_step_source;
+    document.getElementById('counts').textContent = t.counts(data.changed_routes.length, data.changed_flows.length, data.unchanged_count);
     const tbody = document.querySelector('#evidence tbody');
     tbody.innerHTML = '';
     data.changed_routes.forEach(x => {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td>경로 / Route</td><td>' + x.node + ' ' + x.prefix + '</td><td>' + x.verdict + '</td><td>' + x.base + ' → ' + x.change + '</td>';
+      tr.innerHTML = '<td>' + t.route + '</td><td>' + x.node + ' ' + x.prefix + '</td><td>' + x.verdict + '</td><td>' + x.base + ' → ' + x.change + '</td>';
       tbody.appendChild(tr);
     });
     data.changed_flows.forEach(x => {
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td>트래픽 / Flow</td><td>' + x.start + ' → ' + x.dst_ip + '</td><td>' + x.verdict + '</td><td>' + x.base + ' → ' + x.change + '</td>';
+      tr.innerHTML = '<td>' + t.flow + '</td><td>' + x.start + ' → ' + x.dst_ip + '</td><td>' + x.verdict + '</td><td>' + x.base + ' → ' + x.change + '</td>';
       tbody.appendChild(tr);
     });
     document.getElementById('cliview').textContent = data.cli_view;
     res.style.display = 'block';
   } catch (e) {
-    err.style.display = 'block'; err.textContent = '요청 실패: ' + e;
+    err.style.display = 'block'; err.textContent = t.requestFailed + e;
   } finally {
-    btn.disabled = false; btn.textContent = '검증 실행 / Run validation';
+    btn.disabled = false; btn.textContent = UI[uiLang].run;
   }
 });
 load();
