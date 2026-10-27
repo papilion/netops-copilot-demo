@@ -19,8 +19,26 @@ pybatfish, and the Batfish service.
    Batfish image (`batfish/allinone`) and can take several minutes;
    `scripts/start-live.sh` then starts Batfish on port 9996 and this
    web app on port 8000.
-4. In the Codespaces **Ports** tab, open the forwarded port **8000**
-   (keep its visibility **Private** — do not make it Public).
+4. Open the web app from the **Ports** tab, click by click:
+   - At the bottom of the Codespaces window, click the **PORTS**
+     tab (next to TERMINAL). If you do not see it, use the top
+     menu View > Ports, or press Ctrl+Shift+P and type
+     "Ports: Focus on Ports View".
+   - Find the row for port **8000** (label: NetOps Copilot web app).
+   - On the right side of that row, click the **globe icon**
+     ("Open in Browser"). The web app opens in a new browser tab.
+     If the globe icon is not visible, right-click the 8000 row
+     and choose "Open in Browser".
+   - The globe icon only opens the page for you — it does NOT
+     make the port Public. Keep the port's visibility **Private**
+     (the default for your own codespace). A Private forwarded
+     address still asks for your GitHub login, so only you can
+     open it.
+   - Only port 8000 is forwarded. Port 9996 is the internal Batfish
+     API: it is not a web page, so opening it in a browser shows a
+     404 — that is normal and does not mean Live is broken. Live
+     works through port 8000 alone; the web app talks to Batfish on
+     9996 inside the codespace.
 5. In the web UI, select topology **Advanced**, select a scenario,
    set mode **Live**, and click **Run**.
 
@@ -29,10 +47,9 @@ and try again, or run `bash scripts/start-live.sh` in the codespace
 terminal. If Docker is unavailable in the codespace, the only manual
 step is `docker run -d --name batfish -p 9996:9996 batfish/allinone`
 followed by `bash scripts/start-live.sh`; recorded mode works with
-no Batfish at all. A real Codespaces boot was not run from the
-machine that built this repo, so the first creation is the proof run
-— see `.devcontainer/README.md` for exactly what is automatic and
-what is not yet verified.
+no Batfish at all. Codespaces Live mode was confirmed working by
+the project owner on 2026-10-27 — see `.devcontainer/README.md`
+for exactly what is automatic and what the fallback is.
 
 ## Run (local clone)
 
