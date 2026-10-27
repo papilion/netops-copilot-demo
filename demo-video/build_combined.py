@@ -63,30 +63,44 @@ def main():
             "Example: blackhole at /32, not the whole /25.",
         ]), 10),
         (image_frame(ROOT / "docs" / "topology-simple.png",
-                      "Simple diagram — 5 nodes: cores left, edge centre, peer and customer right"), 12),
+                      "Simple diagram — 5 nodes: cores left, edge centre, peer and customer right"), 10),
         (slide("Simple demo — 3 verdicts", [
             "OSPF cost change → GREEN ALLOW: watched roads unchanged.",
             "Peer prefix blocked → RED BLOCK: prefix lost, flow broken.",
             "New customer prefix → YELLOW REVIEW: human confirms it.",
-        ]), 14),
+        ]), 12),
         (image_frame(ROOT / "docs" / "topology-advanced.png",
-                      "Advanced diagram — Region A left, Region B right, rr1 gold on top"), 12),
+                      "Advanced diagram — Region A left, Region B right, rr1 gold on top"), 10),
         (slide("Advanced lab — 8 verdicts (1 of 2)", [
             "Link failure → GREEN ALLOW: traffic reroutes via coreA2.",
             "BGP session down → RED BLOCK: peer prefix lost at 7 nodes.",
             "LOCAL_PREF exit shift → YELLOW REVIEW: exit moves, flows live.",
             "More-specific hijack → RED BLOCK: cust1 flows to a dead end.",
-        ]), 14),
+        ]), 12),
         (slide("Advanced lab — 8 verdicts (2 of 2)", [
             "Route reflector failure → RED BLOCK: all 6 flows break.",
             "Blackhole /32 → YELLOW REVIEW: one host drops, prefix lives.",
             "RPKI invalid origin → RED BLOCK: LIVE, route-map rejects it.",
             "AS_PATH prepend → YELLOW REVIEW: exit moves, flows live.",
-        ]), 14),
+        ]), 12),
         (terminal("$ python3 advanced/advanced.py --all | LIVE — control diverts, route-map rejects (rendered)",
                   rpki_hl, footer=rpki_footer), 14),
         (terminal("$ python3 advanced/advanced.py --mock --all | MOCK RUN — verdicts match live (rendered)",
                   bh_hl, footer=bh_footer), 12),
+        (slide("How operators use it in real work", [
+            "1. Write the change as a diff / ticket.",
+            "2. Twin it from current configs. 3. Watch list FIRST.",
+            "4. Read the light. 5. A human approves — never auto-applied.",
+            "6. Post-check after applying. 7. In CI/CD: BLOCK fails, REVIEW needs sign-off.",
+            "Not automated: pushing configs, replacing approval, unwatched prefixes.",
+        ]), 14),
+        (slide("Where AI acts — and where it does not", [
+            "AFTER verdict: explains evidence in plain words.",
+            "AFTER verdict: proposes a next change — re-simulate it first.",
+            "BEFORE verdict: turns plain intent into a checkable proposal.",
+            "NEVER: decides the verdict, edits router configs, sees real configs here.",
+            "11 reports' real explanations cost about $0.17 total. Cheap, not a replacement for judgement.",
+        ]), 14),
         (slide("Conclusion", [
             "Safe change passes. Breaking change is stopped.",
             "New announcement waits for a human — even at 13 nodes.",
@@ -109,6 +123,8 @@ def main():
         "Advanced lab, part two. Route reflector failure: red, BLOCK, all six flows break. Blackhole /32: yellow, REVIEW, one host drops, prefix lives. RPKI invalid origin: red, BLOCK, live, the route-map rejects it. AS_PATH prepend: yellow, REVIEW, exit moves, flows live.",
         "Terminal, live: RPKI invalid origin. Verdict: BLOCK. Without the route-map, cust1 flows divert to a dead end. With the route-map, the invalid announcement is rejected.",
         "Terminal, mock run: blackhole /32. Verdict: REVIEW. Only the victim host drops. The customer prefix stays intact.",
+        "How operators use it in real work. One: write the change as a diff or ticket. Two: twin it from current configs. Three: watch list first. Four: read the light. Five: a human approves, never auto-applied. Six: post-check after applying. Seven: in CI/CD, BLOCK fails, REVIEW needs sign-off. Not automated: pushing configs, replacing approval, unwatched prefixes.",
+        "Where AI acts, and where it does not. After the verdict: it explains evidence in plain words. After the verdict: it proposes a next change, which must be re-simulated first. Before the verdict: it turns plain intent into a checkable proposal. Never: decides the verdict, edits router configs, sees real configs here. Eleven reports' real explanations cost about seventeen cents total. Cheap, not a replacement for judgement.",
         "Conclusion. Safe change passes. Breaking change is stopped. New announcement waits for a human, even at 13 nodes. The model explains and suggests. It never decides.",
     ]
     ko = [
@@ -123,6 +139,8 @@ def main():
         "고급 랩, 후반부. route reflector 장애: 빨간불 BLOCK, 트래픽 6개가 전부 끊깁니다. 블랙홀 /32: 노란불 REVIEW, 호스트 하나만 떨어지고 prefix는 살아남습니다. RPKI 유효하지 않은 origin: 빨간불 BLOCK, 라이브로 route-map이 거부합니다. AS_PATH prepend: 노란불 REVIEW, 출구가 바뀌지만 트래픽은 살아있습니다.",
         "터미널, 라이브: RPKI 유효하지 않은 origin. 판정 BLOCK입니다. route-map이 없으면 cust1 트래픽이 막다른 길로 빠지고, route-map이 있으면 유효하지 않은 발표가 거부됩니다.",
         "터미널, 기록 재생: 블랙홀 /32. 판정 REVIEW입니다. 피해자 호스트만 떨어지고, 고객 prefix는 그대로입니다.",
+        "실무 사용법. 첫째, 변경을 diff나 티켓으로 씁니다. 둘째, 현재 설정으로 트윈을 만듭니다. 셋째, 감시 목록을 먼저 정합니다. 넷째, 신호등을 읽습니다. 다섯째, 사람이 승인합니다. 절대 자동 적용하지 않습니다. 여섯째, 적용 뒤에 사후 확인합니다. 일곱째, CI/CD에서는 BLOCK이면 실패, REVIEW면 서명 필요입니다. 자동화되지 않는 것: 라우터에 설정 밀어넣기, 승인 대체, 감시하지 않은 prefix입니다.",
+        "AI가 작용하는 곳과 아닌 곳. 판정 뒤에 증거를 평문으로 설명합니다. 판정 뒤에 다음 변경을 제안하고, 그 제안은 먼저 다시 시뮬레이션해야 합니다. 판정 앞에는 평문 의도를 검사 가능한 제안으로 바꿉니다. 절대 하지 않는 것: 판정 내리기, 라우터 설정 고치기, 여기서 실제 설정 보기입니다. 리포트 11건의 실제 설명 비용은 합계 약 0.17달러입니다. 저렴하다는 뜻이지, 판단을 대체한다는 뜻이 아닙니다.",
         "결론. 안전한 변경은 통과하고, 망을 끊는 변경은 막습니다. 새 발표는 13개 노드에서도 사람이 확인합니다. 모델은 설명하고 제안할 뿐, 판정하지 않습니다.",
     ]
     assert len(en) == len(frames) == len(ko), (len(en), len(frames), len(ko))

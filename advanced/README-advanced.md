@@ -74,7 +74,7 @@ python3 advanced/advanced.py --mock --all   # no Batfish needed, ~1 second
 bash ~/workspace/batfish-lab-advanced/start-batfish-advanced.sh   # live, port 9996
 python3 advanced/advanced.py --all
 
-python3 -m unittest discover -s tests   # simple + advanced, 26 tests
+python3 -m unittest discover -s tests   # simple + advanced, 33 tests
 ```
 
 Files here: `advanced.py` (runner), `roas.json` (fictional ROA table for the RPKI check), `demo-data-advanced/*.txt` (verbatim live impact reports; the RPKI file holds both live runs, control + protected),
@@ -82,9 +82,44 @@ Files here: `advanced.py` (runner), `roas.json` (fictional ROA table for the RPK
 The Batfish lab itself lives outside the demo repo at `~/workspace/batfish-lab-advanced/` and is not pushed to GitHub;
 the demo repo carries the canned reports, so a judge can reproduce every verdict with `--mock` alone.
 
+## Real operations: how an operator uses this
+
+1. Write the change as a config diff / change ticket. 2. Build
+the Batfish twin from current production configs (in this demo,
+the fictional lab; production configs are never pasted into a
+public demo). 3. Define the watched list FIRST — the verdict
+only covers the watched scope. 4. Read ALLOW / BLOCK / REVIEW
+with the evidence. 5. A human approves or rejects; the tool
+never applies a change. 6. After applying, re-run as a
+post-check against the new live state. 7. In CI/CD it is a
+gate: BLOCK fails the pipeline, REVIEW needs a human sign-off,
+ALLOW proceeds. Not automated: pushing configs to routers,
+replacing change approval, or covering unwatched prefixes.
+
+## Where AI acts (short version)
+
+Exactly three places, nowhere else. (1) AFTER the verdict, it
+explains the evidence in plain language, so review is faster
+and less error-prone — the verdict is unchanged. (2) AFTER
+the verdict, it proposes a concrete next change (remove the
+blocking filter, LOCAL_PREF/prepend instead of dropping, /32
+not /25 blackhole, reject an invalid RPKI origin and fix the
+ROA), which must be re-simulated before anyone trusts it.
+(3) BEFORE the verdict, as an interface (MCP server, Meta
+prompt path), it turns a plain-language intent into a
+checkable proposal — the verdict still comes only from
+Batfish. It never decides the verdict, never edits a router
+config, never sees real production configs here, and its
+wording can be wrong even when the verdict is right — hence
+the evidence section shown alongside it. Cost note, no
+time-saving claim: the 11 reports' real model explanations
+cost about $0.17 in total (plus about $0.02 for the RPKI
+re-run); that shows the step is cheap, not that it replaces
+engineering judgement.
+
 ## Appendix — Details / honest notes
 
-- **AI role — the model never decides the verdict.** Batfish evidence decides ALLOW / BLOCK / REVIEW by fixed rules. The Meta model only (1) explains the verdict in plain language from the evidence JSON, and (2) proposes a next step or optimisation, which must be re-simulated before anyone trusts it. Each report carries it as "AI explanation / proposed next step (to be re-simulated — NOT the verdict)". The blackhole /32 (keep the drop on one host, never widen to the /25) is the optimisation example. Honest status: the live Meta API run is still pending a key, so current proposals are rule-based; the only Meta-model-written examples are the playground samples in the simple demo's `demo-output/playground-samples.md`.
+- **AI role — the model never decides the verdict.** Batfish evidence decides ALLOW / BLOCK / REVIEW by fixed rules. The Meta model only (1) explains the verdict in plain language from the evidence JSON, and (2) proposes a next step or optimisation, which must be re-simulated before anyone trusts it. Each report carries it as "AI explanation / proposed next step (to be re-simulated — NOT the verdict)". The blackhole /32 (keep the drop on one host, never widen to the /25) is the optimisation example. Honest status: the 11 reports now carry real Meta Model API explanations (about $0.17 total, plus about $0.02 for the RPKI re-run); rule-based text is the fallback. The playground samples in the simple demo's `demo-output/playground-samples.md` are additional examples.
 - **E1 — NULL_ROUTED is fatal.** A flow diverted to a Null0 counts as broken, like NO_ROUTE or DROP.
 - **E2 — Exit shift → REVIEW.** If flows survive but a prefix's exit edge changes, a human must confirm the new exit.
   A next-hop change staying on the same edge is still ALLOW.

@@ -15,34 +15,42 @@ Think of roads and traffic lights. Router means intersection, prefix means neigh
 What does the AI do? It never decides the verdict. Batfish evidence does. It explains the verdict in plain words. It suggests a better change, then we simulate that too. Example: blackhole at /32, not the whole /25.
 
 5
-00:00:38,000 --> 00:00:50,000
+00:00:38,000 --> 00:00:48,000
 Simple diagram: five nodes, cores on the left, edge in the centre, peer and customer on the right.
 
 6
-00:00:50,000 --> 00:01:04,000
+00:00:48,000 --> 00:01:00,000
 Simple demo, three verdicts. OSPF cost change: green, ALLOW, watched roads unchanged. Peer prefix blocked: red, BLOCK, prefix lost, flow broken. New customer prefix: yellow, REVIEW, a human confirms it.
 
 7
-00:01:04,000 --> 00:01:16,000
+00:01:00,000 --> 00:01:10,000
 Advanced diagram: Region A on the left, Region B on the right, route reflector rr1 in gold on top.
 
 8
-00:01:16,000 --> 00:01:30,000
+00:01:10,000 --> 00:01:22,000
 Advanced lab, eight verdicts, part one. Link failure: green, ALLOW, traffic reroutes via coreA2. BGP session down: red, BLOCK, peer prefix lost at seven nodes. LOCAL_PREF exit shift: yellow, REVIEW, exit moves, flows live. More-specific hijack: red, BLOCK, cust1 flows to a dead end.
 
 9
-00:01:30,000 --> 00:01:44,000
+00:01:22,000 --> 00:01:34,000
 Advanced lab, part two. Route reflector failure: red, BLOCK, all six flows break. Blackhole /32: yellow, REVIEW, one host drops, prefix lives. RPKI invalid origin: red, BLOCK, live, the route-map rejects it. AS_PATH prepend: yellow, REVIEW, exit moves, flows live.
 
 10
-00:01:44,000 --> 00:01:58,000
+00:01:34,000 --> 00:01:48,000
 Terminal, live: RPKI invalid origin. Verdict: BLOCK. Without the route-map, cust1 flows divert to a dead end. With the route-map, the invalid announcement is rejected.
 
 11
-00:01:58,000 --> 00:02:10,000
+00:01:48,000 --> 00:02:00,000
 Terminal, mock run: blackhole /32. Verdict: REVIEW. Only the victim host drops. The customer prefix stays intact.
 
 12
-00:02:10,000 --> 00:02:23,970
+00:02:00,000 --> 00:02:14,000
+How operators use it in real work. One: write the change as a diff or ticket. Two: twin it from current configs. Three: watch list first. Four: read the light. Five: a human approves, never auto-applied. Six: post-check after applying. Seven: in CI/CD, BLOCK fails, REVIEW needs sign-off. Not automated: pushing configs, replacing approval, unwatched prefixes.
+
+13
+00:02:14,000 --> 00:02:28,000
+Where AI acts, and where it does not. After the verdict: it explains evidence in plain words. After the verdict: it proposes a next change, which must be re-simulated first. Before the verdict: it turns plain intent into a checkable proposal. Never: decides the verdict, edits router configs, sees real configs here. Eleven reports' real explanations cost about seventeen cents total. Cheap, not a replacement for judgement.
+
+14
+00:02:28,000 --> 00:02:41,970
 Conclusion. Safe change passes. Breaking change is stopped. New announcement waits for a human, even at 13 nodes. The model explains and suggests. It never decides.
 

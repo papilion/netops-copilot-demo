@@ -401,18 +401,105 @@ the verdict)". Examples, by verdict:
 - RPKI → reject the invalid origin and fix the ROA so only the
   legitimate AS may announce the prefix.
 
-*Honest status, read this:* the live Meta API run is still
-pending a key, so the explanations and proposals in the current
-reports are rule-based (written by code, not by the model) and
-Meta-prompt-ready — the code path that calls the API when a key
-is set is built and tested for fallback, but no live API
-explanation has been produced yet. The only Meta-model-written
-examples so far are the playground samples in
-`demo-output/playground-samples.md` (the user ran those prompts
-in the dev.meta.ai playground, and they are labelled as such).
-Do not read any current report as a live API explanation.
+*Honest status, read this:* the 11 demo reports now carry real
+Meta Model API explanations (Muse Spark 1.3, about $0.17 in
+total, plus about $0.02 for the later RPKI re-run), each
+labelled with its model, usage, and cost in the report JSON.
+The rule-based text remains as the fallback when no API call
+succeeds. The playground samples in
+`demo-output/playground-samples.md` are additional
+Meta-model-written examples (the user ran those prompts in
+the dev.meta.ai playground, and they are labelled as such).
+A report whose JSON has no model field has no live API
+explanation — check the field, not the prose.
 
-## 6. Reproduce it in 30 seconds, and what the verdict does NOT guarantee
+## 6. How to use this in real operations (not just in a demo)
+
+This is the operator workflow, step by step. The demo below
+uses the fictional lab; in production every step is the same,
+except the twin is built from the operator's own configs —
+which are never pasted into a public demo like this one.
+
+1. **Write the change as a config diff / change ticket.**
+   The engineer writes the proposed BGP or OSPF change the
+   way they always do: a diff, attached to a ticket.
+2. **Build the digital twin from current production configs.**
+   Batfish loads the current configs and the proposed diff,
+   and simulates both. Nothing is applied to a real router.
+3. **Define the watched list FIRST.** Before looking at any
+   verdict, the operator lists the customer prefixes and
+   partner flows that must not break. This step matters most:
+   the verdict only covers the watched scope. An unwatched
+   prefix is not protected by a green light.
+4. **Compare base vs change, read the traffic light.**
+   Copilot reports ALLOW, BLOCK, or REVIEW for the watched
+   list, with the route and flow evidence attached.
+5. **A human approves or rejects.** The tool never applies
+   a change by itself. BLOCK means "do not apply as written";
+   REVIEW means "a named human signs off on the new exit or
+   the new announcement first".
+6. **After applying, re-run as a post-check.** Once the
+   approved change is live, the same check runs against the
+   new live state, to confirm the real network matches the
+   simulation.
+7. **In CI/CD, it becomes a gate.** The same check runs on
+   every change pipeline: BLOCK fails the pipeline, REVIEW
+   requires a human sign-off, ALLOW proceeds.
+
+What is NOT automated, stated plainly: it does not push
+configs to routers; it does not replace the change-approval
+process; and it does not cover unwatched prefixes. A green
+light is a statement about the watched list only, never a
+blanket "the network is safe".
+
+## 7. Where AI acts, and what effect it has (detailed, honest)
+
+AI acts in exactly three places, and nowhere else.
+
+1. **AFTER the verdict — it explains.** It reads the Batfish
+   evidence and says, in plain language, which prefix, which
+   node, and which flow broke or survived — so an operator
+   or reviewer does not have to read raw route and flow
+   dumps. Effect: human review is faster and less
+   error-prone, because the reviewer checks a short
+   explanation against the evidence section shown right
+   beside it. The verdict itself is unchanged by the model.
+2. **AFTER the verdict — it proposes a next change.** It
+   suggests a concrete alternative instead of a bare
+   rejection: remove the blocking filter, use LOCAL_PREF or
+   prepend instead of dropping, keep a blackhole at /32
+   rather than /25, reject an invalid RPKI origin and fix
+   the ROA. That proposal must be re-simulated before
+   anyone trusts it. Effect: the operator gets a starting
+   alternative instead of starting from zero, and the
+   re-simulation loop turns a guess into a checked
+   candidate. A proposal that fails simulation is discarded,
+   exactly like a bad change.
+3. **BEFORE the verdict — as an interface.** An operator can
+   describe an intent in plain language, and the tool (via
+   its MCP server and the Meta prompt path) turns it into a
+   checkable change proposal. The verdict still comes only
+   from Batfish, after simulation. The model never jumps
+   from "what the operator wants" to "approved".
+
+What AI does NOT do, stated plainly: it never decides
+ALLOW / BLOCK / REVIEW; it never edits a router config; it
+never sees real production configs in this demo (fictional
+data only); and its explanation can be wrong in wording
+even when the verdict is right — which is why the evidence
+section is always shown alongside it, and why a reviewer
+should trust the evidence, not the prose, when they differ.
+
+On cost, without exaggeration: the explanation step is
+cheap, not a replacement for engineering judgement. The
+11 demo reports' real model explanations cost about $0.17
+in total (plus about $0.02 for the later RPKI re-run). No
+time-saving number is claimed here, because none was
+measured — the effect described above is qualitative:
+shorter, clearer review, and a checked starting point for
+the next change.
+
+## 8. Reproduce it in 30 seconds, and what the verdict does NOT guarantee
 
 ```bash
 # Simple demo, no Batfish server needed (mock replays canned live reports)
