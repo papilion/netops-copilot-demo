@@ -40,6 +40,8 @@ img.topo { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; }
 #topoSvg .link { stroke: #999; stroke-width: 2; }
 #topoSvg .node { fill: #fff; stroke: #333; stroke-width: 2; }
 #topoSvg .nodeLabel { font-size: 15px; font-weight: 700; text-anchor: middle; fill: #1a1a1a; }
+#topoSvg .nodeAsn { font-size: 12px; font-weight: 600; text-anchor: middle; fill: #333; }
+#topoSvg .nodeIp { font-size: 11px; text-anchor: middle; fill: #555; font-family: monospace; }
 #topoSvg .ext { fill: #eef4ff; }
 #topoSvg .hl-link { stroke: #c0392b; stroke-width: 5; stroke-dasharray: 12 7; animation: topoDash 1s linear infinite; }
 #topoSvg .alt-link { stroke: #1a7f37; stroke-width: 5; stroke-dasharray: 12 7; animation: topoDash 1s linear infinite; }
@@ -68,7 +70,7 @@ img.topo { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; }
   <option value="advanced">고급 랩 (13 nodes)</option>
 </select></label>
 <div id="topoWrap" style="border:1px solid #ccc; border-radius:8px; padding:8px; background:#fbfbfb;">
-<svg id="topoSvg" viewBox="0 0 900 520" style="width:100%; height:auto; display:block;" role="img" aria-label="Topology diagram"></svg>
+<svg id="topoSvg" viewBox="0 0 900 580" style="width:100%; height:auto; display:block;" role="img" aria-label="Topology diagram"></svg>
 <p id="topoCaption" style="margin:8px 4px 2px; font-size:0.95em; font-weight:600;"></p>
 <p id="topoNote" style="margin:2px 4px; font-size:0.85em; color:#555;">구성도는 실제 랩 설정의 물리 링크(description)를 바탕으로 그린 약도입니다. 빨간 점선은 테스트 대상 구간, 초록 점선은 우회/새 출구입니다. 애니메이션 점선은 테스트 구간을 가리킵니다.</p>
 </div>
@@ -187,14 +189,21 @@ const KO_SCENARIO = {
   'rpki-invalid-origin': ['RPKI 무효 origin: peer2가 cust1 203.0.113.0/25 발표 (ROA: 203.0.113.0/24, AS64498, maxLength 24)', 'RPKI origin 검증, route-map 강제 적용으로 라이브 검증합니다(정직한 분리): Batfish는 ROV 상태를 계산하지 않으므로, 검증 결정은 가상의 ROA 테이블(roas.json: 203.0.113.0/24 → AS64498만, maxLength 24)에서 오고, 강제 적용은 edgeB1의 실제 인바운드 route-map이 무효 발표를 거부하는 것입니다. peer2(AS64499)가 더 구체적인 203.0.113.0/25를 발표하면 두 가지로 무효입니다. origin AS64499 ≠ ROA AS64498이고, /25가 ROA maxLength 24를 넘습니다.'],
   'aspath-prepend-deprefer': ['AS_PATH prepend 우선순위 낮추기: edgeA2 경유 cust1에 prepend', 'edgeA2에서 cust1에 AS64496을 두 번 prepend합니다. 모든 코어는 cust1 출구를 edgeB1으로 옮겨야 하고, 모든 flow가 살아남아야 합니다.']
 };
+const NODE_INFO = {
+  core1: ['AS64496', '192.0.2.1'], core2: ['AS64496', '192.0.2.2'], edge1: ['AS64496', '192.0.2.3'],
+  coreA1: ['AS64496', '192.0.2.1'], coreA2: ['AS64496', '192.0.2.2'], edgeA1: ['AS64496', '192.0.2.3'], edgeA2: ['AS64496', '192.0.2.4'],
+  coreB1: ['AS64496', '192.0.2.5'], coreB2: ['AS64496', '192.0.2.6'], edgeB1: ['AS64496', '192.0.2.7'], rr1: ['AS64496', '192.0.2.8'],
+  cust1: ['AS64498', '203.0.113.0/24'], cust2: ['AS64500', '203.0.113.128/25'],
+  peer1: ['AS64497', '198.51.100.128/25'], peer2: ['AS64499', '198.51.100.192/26'], transit1: ['AS64501', '198.51.100.64/26']
+};
 const TOPO = {
   simple: {
-    nodes: {core1: [300,120], core2: [600,120], edge1: [450,280], cust1: [300,430], peer1: [600,430]},
+    nodes: {core1: [300,130], core2: [600,130], edge1: [450,300], cust1: [300,440], peer1: [600,440]},
     links: [['core1','core2'], ['core1','edge1'], ['core2','edge1'], ['edge1','cust1'], ['edge1','peer1']],
     ext: ['cust1','peer1']
   },
   advanced: {
-    nodes: {rr1: [450,30], coreA1: [140,130], coreA2: [320,130], coreB1: [580,210], coreB2: [760,210], edgeA1: [140,300], edgeA2: [320,300], edgeB1: [670,360], peer1: [80,450], transit1: [200,450], cust1: [380,450], cust2: [560,450], peer2: [800,450]},
+    nodes: {rr1: [450,35], coreA1: [140,145], coreA2: [320,145], coreB1: [580,225], coreB2: [760,225], edgeA1: [140,315], edgeA2: [320,315], edgeB1: [670,375], peer1: [80,445], transit1: [200,445], cust1: [380,445], cust2: [560,445], peer2: [800,445]},
     links: [['coreA1','coreA2'], ['coreA1','edgeA1'], ['coreA1','edgeA2'], ['coreA1','coreB1'], ['coreA1','rr1'], ['coreA2','edgeA1'], ['coreA2','edgeA2'], ['coreA2','coreB2'], ['coreB1','coreB2'], ['coreB1','edgeB1'], ['coreB1','rr1'], ['coreB2','edgeB1'], ['edgeA1','peer1'], ['edgeA1','transit1'], ['edgeA2','cust1'], ['edgeB1','peer2'], ['edgeB1','cust2'], ['edgeB1','cust1']],
     ext: ['peer1','transit1','cust1','cust2','peer2']
   }
@@ -241,17 +250,20 @@ function renderTopo() {
   });
   Object.entries(topo.nodes).forEach(([name, [x, y]]) => {
     const isExt = topo.ext.includes(name);
-    if (hlNodes.has(name)) html += '<circle class="hl-ring" cx="' + x + '" cy="' + y + '" r="30"/>';
-    html += '<circle class="node' + (isExt ? ' ext' : '') + (hlNodes.has(name) ? ' hl-node' : '') + '" cx="' + x + '" cy="' + y + '" r="30"/>';
-    html += '<text class="nodeLabel" x="' + x + '" y="' + (y + 5) + '">' + name + '</text>';
+    const info = NODE_INFO[name] || ['', ''];
+    if (hlNodes.has(name)) html += '<circle class="hl-ring" cx="' + x + '" cy="' + y + '" r="26"/>';
+    html += '<circle class="node' + (isExt ? ' ext' : '') + (hlNodes.has(name) ? ' hl-node' : '') + '" cx="' + x + '" cy="' + y + '" r="26"/>';
+    html += '<text class="nodeLabel" x="' + x + '" y="' + (y + 42) + '">' + name + '</text>';
+    html += '<text class="nodeAsn" x="' + x + '" y="' + (y + 58) + '">' + info[0] + '</text>';
+    html += '<text class="nodeIp" x="' + x + '" y="' + (y + 74) + '">' + info[1] + '</text>';
   });
   svg.innerHTML = html;
   const cap = document.getElementById('topoCaption');
   if (cap) cap.textContent = (uiLang === 'ko' ? (hl.ko || '') : (hl.en || ''));
   const note = document.getElementById('topoNote');
   if (note) note.textContent = uiLang === 'ko'
-    ? '구성도는 실제 랩 설정의 물리 링크(description)를 바탕으로 그린 약도입니다. 빨간 점선은 테스트 대상 구간, 초록 점선은 우회/새 출구입니다. 애니메이션 점선은 테스트 구간을 가리킵니다.'
-    : 'This diagram is a sketch based on the physical links (descriptions) in the real lab configs. Red dashed = test section, green dashed = reroute / new exit. The animated dashed line marks the test section.';
+    ? '구성도는 실제 랩 설정의 물리 링크(description)를 바탕으로 그린 약도입니다. 노드 아래 ASN과 IP는 설정에서 가져왔습니다 (내부는 Loopback, 외부는 발표 prefix). 빨간 점선은 테스트 대상 구간, 초록 점선은 우회/새 출구입니다. 애니메이션 점선은 테스트 구간을 가리킵니다.'
+    : 'This diagram is a sketch based on the physical links (descriptions) in the real lab configs. ASN and IP under each node come from the configs (Loopback for internal nodes, announced prefix for external nodes). Red dashed = test section, green dashed = reroute / new exit. The animated dashed line marks the test section.';
 }
 function applyLang() {
   uiLang = document.getElementById('lang').value;
