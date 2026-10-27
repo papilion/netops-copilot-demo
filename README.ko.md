@@ -40,7 +40,7 @@ GitHub 웹에서 저장소를 열고 **Code > Codespaces > Create codespace**를
 Codespace 이름을 클릭하면 2~5분이면 됩니다. 처음 쓰는 사람을 위한
 자세한 사용법(지구본, 다시 열기/멈추기/지우기, 요금, 지역, Meta AI 키,
 문제 해결)은 [docs/CODESPACES-GUIDE.ko.md](docs/CODESPACES-GUIDE.ko.md)를
-보세요.
+보세요. 영문판은 [docs/CODESPACES-GUIDE.md](docs/CODESPACES-GUIDE.md)입니다.
 
 ## 실행
 
