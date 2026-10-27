@@ -118,11 +118,11 @@ VENDORS = ("cisco", "arista", "juniper")
 def validate_simple(name, mode, lang="ko", vendor="cisco"):
     scenario = copilot.SCENARIOS[name]
     if mode == "recorded":
-        # Canned reports are Cisco evidence; the vendor choice applies
-        # to Live only, so a recorded result is always labelled cisco.
-        raw = copilot.run_mock(name)
+        # Per-vendor canned reports (live-captured from that vendor's
+        # lab, except add-customer-prefix, which is a verbatim Cisco
+        # copy in every vendor directory — mock-only in all vendors).
+        raw = copilot.run_mock(name, vendor=vendor)
         evidence_source = "recorded-replay (canned Batfish impact report)"
-        vendor = "cisco"
     else:
         if scenario.get("mock_only"):
             raise ValueError(
@@ -174,10 +174,9 @@ def validate_advanced(name, mode, lang="ko", vendor="cisco"):
     control_routes = control_flows = None
     protected_routes = protected_flows = None
     if mode == "recorded":
-        raw = (advanced_mod.DATA_DIR / ("%s.txt" % name)).read_text(
+        raw = (advanced_mod.MOCK_DIRS[vendor] / ("%s.txt" % name)).read_text(
             encoding="utf-8")
         evidence_source = "recorded-replay (canned live Batfish report)"
-        vendor = "cisco"
     elif scenario.get("control_dir"):
         raw_control = advanced_mod.run_batfish_advanced(
             scenario["control_dir"], vendor=vendor)

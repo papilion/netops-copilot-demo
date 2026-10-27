@@ -181,15 +181,30 @@ def run_batfish(change_dir, vendor="cisco"):
     return proc.stdout
 
 
-def run_mock(name):
+MOCK_DIRS = {
+    "cisco": DATA_DIR,
+    "arista": HERE / "demo-data-arista",
+    "juniper": HERE / "demo-data-juniper",
+}
+
+
+def run_mock(name, vendor="cisco"):
     """Return the canned Batfish impact report for a scenario.
 
     The ospf/block files are the verbatim impact reports from the
     recorded live runs (demo-output/*.md, Batfish raw output section);
     parsing them must give the same verdicts as the live runs. The
-    add-customer-prefix file is mock-verified only (see SCENARIOS).
+    add-customer-prefix file is mock-verified only (see SCENARIOS) and
+    is a verbatim Cisco copy in every vendor directory. Vendor
+    directories hold live-captured reports from that vendor's lab,
+    except add-customer-prefix (no live overlay exists for any vendor).
     """
-    mock_file = SCENARIOS[name]["mock_file"]
+    if vendor not in MOCK_DIRS:
+        raise ValueError("Unknown vendor: %s (cisco, arista, juniper)" % vendor)
+    if vendor == "cisco":
+        mock_file = SCENARIOS[name]["mock_file"]
+    else:
+        mock_file = MOCK_DIRS[vendor] / ("%s.txt" % name)
     return mock_file.read_text(encoding="utf-8")
 
 
@@ -615,17 +630,18 @@ def meta_explanation(api_key, model, scenario, verdict, violations, notes,
         return None, None, None
 
 
-def run_one(name, mock=False, lang="ko"):
+def run_one(name, mock=False, lang="ko", vendor="cisco"):
     scenario = SCENARIOS[name]
     print("== %s ==" % scenario["title"])
     if mock:
-        raw = run_mock(name)
-        evidence_source = "mock (canned Batfish impact report in demo-data/)"
+        raw = run_mock(name, vendor=vendor)
+        evidence_source = ("mock (canned Batfish impact report in %s/)"
+                           % MOCK_DIRS[vendor].name)
     else:
         if scenario.get("mock_only"):
             print("Skipping %s: mock-only scenario, no live Batfish overlay." % name)
             return None
-        raw = run_batfish(scenario["change_dir"])
+        raw = run_batfish(scenario["change_dir"], vendor=vendor)
         evidence_source = "batfish-live"
     routes, flows = parse_impact(raw)
     verdict, violations, notes = apply_policy(routes, flows)
@@ -756,6 +772,9 @@ def main():
                          "(no Batfish server, Java or venv needed)")
     ap.add_argument("--lang", choices=["ko", "en"], default="ko",
                     help="explanation language: ko (default, original) or en")
+    ap.add_argument("--vendor", choices=["cisco", "arista", "juniper"],
+                    default="cisco",
+                    help="lab vendor for live and recorded runs (default cisco)")
     args = ap.parse_args()
     names = list(SCENARIOS) if args.all else [args.change]
     if not names:
@@ -766,7 +785,7 @@ def main():
         for n in skipped:
             print("Skipping %s in live mode (mock-only scenario)." % n)
     for name in names:
-        run_one(name, mock=args.mock, lang=args.lang)
+        run_one(name, mock=args.mock, lang=args.lang, vendor=args.vendor)
         print()
     return 0
 

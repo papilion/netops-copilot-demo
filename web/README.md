@@ -59,11 +59,12 @@ python3 web/app.py
 # WEB_PORT=8080 python3 web/app.py   (to change the port)
 ```
 
-## Vendor (Live only)
+## Vendor
 
 The UI has a vendor dropdown: **Cisco IOS**, **Arista EOS**, **Juniper
-Junos**. It applies to Live only. The same topology, IPs, ASNs and
-policies are translated into each vendor's syntax under `labs/`:
+Junos**. It applies to Live and to recorded replay. The same topology,
+IPs, ASNs and policies are translated into each vendor's syntax under
+`labs/`:
 
 - Cisco: `labs/batfish-lab/`, `labs/batfish-lab-advanced/`
 - Arista: `labs/batfish-lab-arista/`, `labs/batfish-lab-advanced-arista/`
@@ -74,10 +75,14 @@ policies are translated into each vendor's syntax under `labs/`:
 
 All 11 scenarios were verified live against the Cisco baseline and give
 identical verdicts in all three vendors (2026-10-28, Batfish parse
-PASSED for every file). Recorded replay uses Cisco canned reports, so a
-recorded result is always labelled vendor `cisco` regardless of the
-dropdown. For Juniper, Batfish returns node names lowercased, so the
-evidence table shows `corea1` etc.; verdicts are unaffected.
+PASSED for every file). Recorded replay also has per-vendor files,
+live-captured from each vendor's lab: `demo-data-arista/`,
+`demo-data-juniper/`, `advanced/demo-data-advanced-arista/` and
+`advanced/demo-data-advanced-juniper/`. The one exception is
+add-customer-prefix: it is mock-only in all vendors (no live overlay
+exists for any vendor), so its file is a verbatim Cisco copy in every
+vendor directory. For Juniper, Batfish returns node names lowercased,
+so the evidence table shows `corea1` etc.; verdicts are unaffected.
 
 ## Modes
 

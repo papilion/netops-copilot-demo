@@ -445,30 +445,42 @@ def run_batfish_advanced(change_dir, vendor="cisco"):
     return proc.stdout
 
 
-def run_one(name, mock=False, lang="ko"):
+MOCK_DIRS = {
+    "cisco": DATA_DIR,
+    "arista": HERE / "demo-data-advanced-arista",
+    "juniper": HERE / "demo-data-advanced-juniper",
+}
+
+
+def run_one(name, mock=False, lang="ko", vendor="cisco"):
     scenario = SCENARIOS[name]
     print("== %s ==" % scenario["title"])
     if not mock and not scenario.get("live_supported", True):
         print("SKIP (live): %s is recorded-replay-only; "
               "run with --mock to reproduce it." % name)
         return None
+    if vendor not in MOCK_DIRS:
+        raise ValueError("Unknown vendor: %s (cisco, arista, juniper)" % vendor)
     control_routes = control_flows = None
     if mock:
-        raw = (DATA_DIR / ("%s.txt" % name)).read_text(encoding="utf-8")
-        source = "mock-advanced (canned live Batfish impact report)"
+        raw = (MOCK_DIRS[vendor] / ("%s.txt" % name)).read_text(
+            encoding="utf-8")
+        source = ("mock-advanced (canned live Batfish impact report in %s/)"
+                  % MOCK_DIRS[vendor].name)
     elif scenario.get("control_dir"):
         # Two-run live scenario (RPKI): the protected change (announcement
         # + rejecting route-map) and the unprotected control (announcement
         # only). The canned txt concatenates both verbatim reports, so
         # mock replay parses the same merged evidence and agrees.
-        raw_control = run_batfish_advanced(scenario["control_dir"])
-        raw = run_batfish_advanced(scenario["change_dir"])
+        raw_control = run_batfish_advanced(scenario["control_dir"],
+                                            vendor=vendor)
+        raw = run_batfish_advanced(scenario["change_dir"], vendor=vendor)
         control_routes, control_flows = copilot.parse_impact(raw_control)
         raw = (raw_control + "\n\n===== Protected run (with route-map) "
                "=====\n\n" + raw)
         source = "batfish-live-advanced"
     else:
-        raw = run_batfish_advanced(scenario["change_dir"])
+        raw = run_batfish_advanced(scenario["change_dir"], vendor=vendor)
         source = "batfish-live-advanced"
     routes, flows = copilot.parse_impact(raw)
     protected_routes = protected_flows = None
@@ -601,12 +613,15 @@ def main():
                     help="use canned live impact reports, no Batfish needed")
     ap.add_argument("--lang", choices=["ko", "en"], default="ko",
                     help="explanation language: ko (default, original) or en")
+    ap.add_argument("--vendor", choices=["cisco", "arista", "juniper"],
+                    default="cisco",
+                    help="lab vendor for live and recorded runs (default cisco)")
     args = ap.parse_args()
     names = list(SCENARIOS) if args.all else [args.change]
     if not names:
         ap.error("give --change <name> or --all")
     for name in names:
-        run_one(name, mock=args.mock, lang=args.lang)
+        run_one(name, mock=args.mock, lang=args.lang, vendor=args.vendor)
         print()
     return 0
 

@@ -84,12 +84,12 @@ img.topo { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; }
 
 <label><input type="radio" name="mode" value="recorded" checked> <span id="modeRecorded">Recorded replay (기록 재생 — Batfish 서버 없이 동작)</span></label>
 <label><input type="radio" name="mode" value="live"> <span id="modeLive">Live (실시간 Batfish, 포트 9996)</span></label>
-<label><span id="vendorLabel">벤더 / Vendor (Live 전용):</span>
+<label><span id="vendorLabel">벤더 / Vendor:</span>
 <select id="vendor">
   <option value="cisco">Cisco IOS</option>
   <option value="arista">Arista EOS</option>
   <option value="juniper">Juniper Junos</option>
-</select> <small id="vendorNote">기록 재생은 Cisco 보고서라 벤더 선택이 적용되지 않습니다. Juniper는 Batfish가 노드명을 소문자로 돌려줍니다.</small></label>
+</select> <small id="vendorNote">기록 재생도 벤더별 파일이 있습니다 (고객 prefix 추가만 전 벤더 공통 mock 파일). Juniper는 Batfish가 노드명을 소문자로 돌려줍니다.</small></label>
 <button id="run">검증 실행 / Run validation</button>
 
 <div id="error" class="warn" style="display:none"></div>
@@ -140,7 +140,7 @@ const UI = {
     intro: '백본 설정을 바꾸기 전에, 가상 네트워크(Batfish 디지털 트윈)에서 먼저 돌려보고 판정을 받습니다. 판정은 신호등 3개뿐입니다: 🟢 ALLOW(바꿔도 됨) / 🟡 REVIEW(사람 확인) / 🔴 BLOCK(바꾸면 안 됨). 이 도구는 판정만 내립니다. 설정을 라우터에 적용하지 않으며, 결정은 사람이 합니다.',
     topoLabel: '토폴로지 / Topology:', simpleOpt: '단순 데모 (5 nodes)', advancedOpt: '고급 랩 (13 nodes)',
     scenarioLabel: '시나리오 / Scenario:', modeRecorded: 'Recorded replay (기록 재생 — Batfish 서버 없이 동작)', modeLive: 'Live (실시간 Batfish, 포트 9996)',
-    vendorLabel: '벤더 / Vendor (Live 전용):', vendorNote: '기록 재생은 Cisco 보고서라 벤더 선택이 적용되지 않습니다. Juniper는 Batfish가 노드명을 소문자로 돌려줍니다.',
+    vendorLabel: '벤더 / Vendor:', vendorNote: '기록 재생도 벤더별 파일이 있습니다 (고객 prefix 추가만 전 벤더 공통 mock 파일). Juniper는 Batfish가 노드명을 소문자로 돌려줍니다.',
     run: '검증 실행 / Run validation', running: '실행 중…',
     verdictHeading: '판정 / Verdict:', sourceLabel: '증거 출처 / Evidence source:',
     glanceHeading: '한눈에 보기 / At a glance', intentHeading: '의도 / Intent — 자세히 보기',
@@ -164,7 +164,7 @@ const UI = {
     intro: 'Before changing backbone settings, simulate the change in a virtual network (Batfish digital twin) and get a verdict. Only three traffic lights: 🟢 ALLOW (safe to change) / 🟡 REVIEW (human check) / 🔴 BLOCK (do not change). This tool only validates; it never applies a change to a router, and a human decides.',
     topoLabel: 'Topology:', simpleOpt: 'Simple demo (5 nodes)', advancedOpt: 'Advanced lab (13 nodes)',
     scenarioLabel: 'Scenario:', modeRecorded: 'Recorded replay (works without a Batfish server)', modeLive: 'Live (real-time Batfish, port 9996)',
-    vendorLabel: 'Vendor (Live only):', vendorNote: 'Recorded replay uses Cisco reports, so the vendor choice does not apply there. For Juniper, Batfish returns node names lowercased.',
+    vendorLabel: 'Vendor:', vendorNote: 'Recorded replay also has per-vendor files (only add-customer-prefix is a shared mock file in all vendors). For Juniper, Batfish returns node names lowercased.',
     run: 'Run validation', running: 'Running…',
     verdictHeading: 'Verdict:', sourceLabel: 'Evidence source:',
     glanceHeading: 'At a glance', intentHeading: 'Intent — details',
