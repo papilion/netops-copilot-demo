@@ -4,35 +4,101 @@ ISP 백본 운영자가 BGP/OSPF 변경을 운영망에 적용하기 **전에**,
 Batfish 디지털 트윈으로 시뮬레이션하고 영향 범위·정책 위반·판정을
 평문으로 알려주는 데모입니다.
 
-## 데모 시나리오 (2개, 대조 구조)
+## 데모 시나리오 (3개, 대조 구조)
 
 | 시나리오 | 변경 | 기대 판정 |
 |---|---|---|
 | `ospf-cost-shift` | core1→edge1 OSPF cost 10→100 | 감시 대상 0건 변화 (BGP 경로·flow 유지) → **ALLOW** |
 | `block-peer-prefix` | edge1에서 peer1발 198.51.100.128/25 inbound 차단 | 감시 prefix 소실 + flow 중단 → **BLOCK** |
+| `add-customer-prefix` | edge1에 신규 고객 prefix 203.0.113.128/25 등장 (mock-only) | 신규 경로 → 사람이 확인해야 함 → **REVIEW** |
 
-두 시나리오를 나란히 보여주는 것이 데모의 핵심입니다.
-"안전한 변경은 통과시키고, 망을 끊는 변경은 막는다"는 것을
-같은 엔진·같은 정책으로 증명합니다.
+세 시나리오를 나란히 보여주는 것이 데모의 핵심입니다.
+"안전한 변경은 통과시키고, 망을 끊는 변경은 막고, 새로운
+공지는 사람이 확인한다"는 것을 같은 엔진·같은 정책으로 증명합니다.
 
-## 실행
+## 구조
+
+```
+제안된 BGP/OSPF 변경
+        │
+        ▼
+Batfish 디지털 트윈 (live) ──또는── demo-data/ canned impact report (mock)
+        │  routes + traceroute flows, base vs change
+        ▼
+copilot.py: parse → apply_policy → ALLOW / REVIEW / BLOCK
+        │  판정은 항상 Batfish 증거에서만 나옵니다
+        ▼
+설명 레이어: Meta Model API (Muse Spark 1.3, 키가 있을 때) ──또는── 로컬 템플릿
+        │
+        ▼
+demo-output/*.json + *.md  (판정, 위반, 증거, 설명 출처, 비용 추정치)
+```
+
+## 실행 — Quickstart (재현, Batfish 불필요)
+
+```bash
+cd ~/workspace/hackathon/netops-copilot-demo
+python3 copilot.py --mock --all   # ~1초, 3개 판정: ALLOW / BLOCK / REVIEW
+python3 -m unittest discover -s tests -v   # 정책·파싱·Meta 비용 계산 테스트
+```
+
+`--mock`은 `demo-data/`의 canned Batfish impact report를 씁니다.
+ospf/block 파일은 기록된 live 실행의 raw output을 그대로 가져온
+것이라 mock 판정은 live 판정과 동일합니다 (ALLOW / BLOCK).
+`add-customer-prefix`는 mock-only 시나리오입니다.
+
+## 실행 — 전체 live Batfish (선택)
 
 ```bash
 # 1. Batfish 서비스 시작 (별도 터미널, 포트 9996)
 bash ~/workspace/batfish-lab/start-batfish.sh
 
-# 2. 데모 실행 (기본: 로컬 설명 템플릿, API 호출 없음, 크레딧 소모 없음)
+# 2. 데모 실행 (live 모드에서는 mock-only 시나리오가 건너뛰어집니다)
 cd ~/workspace/hackathon/netops-copilot-demo
 python3 copilot.py --all
+```
 
-# 3. Meta Model API 설명을 붙이고 싶을 때만 (선택, 소량 과금)
-META_API_KEY='...' META_MODEL='muse-spark-1.3' python3 copilot.py --all
+## Meta Model API 설명 (기본 경로)
+
+`META_API_KEY`가 설정되면 설명은 Meta Model API가 기본으로
+만듭니다 (모델 `muse-spark-1.3`, OpenAI-compatible 엔드포인트).
+API 응답의 usage가 있으면 리포트에 `usage`와 `cost_usd_estimate`도
+기록됩니다. 키가 없으면 명확히 건너뛴다고 출력하고 로컬 템플릿을
+씁니다. 키가 없어도 기록된 API 스타일 샘플은
+`demo-output/playground-samples.md`에서 볼 수 있습니다.
+키 값은 절대 파일에 넣지 마세요 (환경변수만).
+
+```bash
+META_API_KEY='...' META_MODEL='muse-spark-1.3' python3 copilot.py --mock --all
 # 모델 ID는 dev.meta.ai에서 실제 목록을 확인한 뒤 지정하세요.
 ```
 
 결과는 `demo-output/`에 JSON + Markdown 리포트로 남습니다.
 판정은 항상 Batfish 증거에서 나오고, 모델 설명은 그 증거를
 다시 쓰는 역할만 합니다. 모델이 판정을 뒤집지 않습니다.
+
+## MCP 서버 (에이전트가 부르는 도구)
+
+```bash
+python3 mcp_server.py   # stdlib만, JSON-RPC over stdio
+```
+
+도구: `list_scenarios`, `validate_change` (기본 mock, live는
+`use_mock: false`), `get_policy`. 예시 클라이언트 설정:
+
+```json
+{
+  "mcpServers": {
+    "netops-copilot": {
+      "command": "python3",
+      "args": ["/path/to/netops-copilot-demo/mcp_server.py"]
+    }
+  }
+}
+```
+
+이 데모는 변경을 **적용하지 않습니다**. `validate_change`는 판정만
+반환합니다. 적용 여부는 사람이 결정합니다.
 
 ## 모델 선택 (dev.meta.ai 목록, 2026-10-27 확인)
 
@@ -64,8 +130,9 @@ META_API_KEY='...' META_MODEL='muse-spark-1.3' python3 copilot.py --all
 
 - Impact 30%: 잘못된 BGP/OSPF 변경이 초 단위로 번지는 백본에서,
   적용 전 시뮬레이션으로 장애를 막는다는 문제 정의
-- Meta 도구 활용 25%: Meta Model API로 증거 기반 설명 생성
-  (기본 실행은 크레딧을 쓰지 않는 로컬 템플릿, 선택 시 API 연결)
-- Demo 25%: 위 2개 시나리오의 ALLOW/BLOCK 대조 실행 + 리포트
+- Meta 도구 활용 25%: Meta Model API가 키가 있을 때 기본 설명 경로
+  (usage·비용 추정치 기록, 키가 없으면 명시적으로 건너뜀) + MCP 서버
+- Demo 25%: 3개 시나리오의 ALLOW/BLOCK/REVIEW 대조 실행 + 리포트,
+  mock 모드로 심사자가 즉시 재현 가능
 - 기술 깊이 20%: Batfish 라우팅·traceroute 증거를 파싱해
   정책으로 판정하는 파이프라인

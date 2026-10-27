@@ -25,7 +25,10 @@ Safety / scope:
   - This demo never applies a change. It only reports. Applying is a
     separate human decision.
 
-Usage:
+Usage (reproducible, no Batfish needed — start here):
+  python3 copilot.py --mock --all
+  python3 copilot.py --mock --change add-customer-prefix
+Usage (full live Batfish run, needs batfish-lab + a running Batfish service):
   python3 copilot.py --change ospf-cost-shift
   python3 copilot.py --change block-peer-prefix
   python3 copilot.py --all
@@ -50,6 +53,14 @@ LAB = Path.home() / "workspace" / "batfish-lab"
 VALIDATE = LAB / "harness" / "validate.py"
 LAB_VENV_PYTHON = LAB / "venv" / "bin" / "python"
 OUT_DIR = HERE / "demo-output"
+DATA_DIR = HERE / "demo-data"
+
+# Meta Model API pricing (dev.meta.ai model list, checked 2026-10-27).
+# Used only for the cost estimate shown next to an API explanation.
+MODEL_PRICING = {
+    "muse-spark-1.3": {"input": 1.25, "cached_input": 0.15, "output": 4.25},
+}
+DEFAULT_MODEL = "muse-spark-1.3"
 
 # ---------------------------------------------------------------- policy
 # Verdicts are derived from Batfish evidence only.
@@ -71,11 +82,27 @@ SCENARIOS = {
         "intent": "Shift traffic so core1 reaches edge1 via core2 instead of directly, "
                   "without breaking any watched prefix or flow.",
         "change_dir": LAB / "changes" / "ospf-cost-shift",
+        "mock_file": DATA_DIR / "ospf-cost-shift.txt",
+        "mock_only": False,
     },
     "block-peer-prefix": {
         "title": "BGP inbound filter: deny peer prefix 198.51.100.128/25 from peer1 at edge1",
         "intent": "Block the peer prefix 198.51.100.128/25 inbound from peer1 (AS64497).",
         "change_dir": LAB / "changes" / "block-peer-prefix",
+        "mock_file": DATA_DIR / "block-peer-prefix.txt",
+        "mock_only": False,
+    },
+    "add-customer-prefix": {
+        "title": "Add new customer prefix: 203.0.113.128/25 appears at edge1",
+        "intent": "Announce a new fictional customer prefix 203.0.113.128/25 "
+                  "without touching any existing watched prefix or flow. "
+                  "A new route should be REVIEW, not ALLOW, because a "
+                  "human must confirm the new announcement is intended.",
+        "change_dir": None,
+        "mock_file": DATA_DIR / "add-customer-prefix.txt",
+        # Mock-verified only: no live Batfish overlay for this scenario
+        # is shipped in the repo, so the live run skips it (see main()).
+        "mock_only": True,
     },
 }
 
@@ -90,6 +117,73 @@ def run_batfish(change_dir):
             % (proc.stdout, proc.stderr)
         )
     return proc.stdout
+
+
+def run_mock(name):
+    """Return the canned Batfish impact report for a scenario.
+
+    The ospf/block files are the verbatim impact reports from the
+    recorded live runs (demo-output/*.md, Batfish raw output section);
+    parsing them must give the same verdicts as the live runs. The
+    add-customer-prefix file is mock-verified only (see SCENARIOS).
+    """
+    mock_file = SCENARIOS[name]["mock_file"]
+    return mock_file.read_text(encoding="utf-8")
+
+
+def build_meta_prompt(scenario, verdict, violations, notes):
+    """Build the Meta Model API prompt from Batfish evidence only."""
+    evidence = {
+        "change": scenario["title"],
+        "intent": scenario["intent"],
+        "verdict_from_batfish": verdict,
+        "violations": violations,
+        "notes": notes,
+    }
+    return (
+        "You are a network operations assistant. Rewrite the following "
+        "Batfish simulation result as a short plain-language briefing "
+        "for a network engineer (max 5 sentences, Korean). Do NOT invent "
+        "routes, prefixes, or flows beyond the evidence. Keep the verdict "
+        "exactly as given.\n\nEvidence (JSON):\n%s"
+        % json.dumps(evidence, ensure_ascii=False)
+    )
+
+
+def parse_meta_response(data):
+    """Extract (text, usage) from an OpenAI-compatible chat response.
+
+    Returns (text, usage_dict_or_None). Raises KeyError/ValueError on
+    malformed responses so the caller can fall back to the local template.
+    """
+    text = data["choices"][0]["message"]["content"].strip()
+    usage = data.get("usage") or None
+    return text, usage
+
+
+def estimate_cost(usage, model=DEFAULT_MODEL):
+    """Estimate USD cost from a usage dict, or None if unusable.
+
+    Pricing is per 1M tokens. prompt_tokens_details.cached_tokens, when
+    present, is billed at the cached-input rate; the rest at input rate.
+    """
+    if not usage:
+        return None
+    pricing = MODEL_PRICING.get(model)
+    if not pricing:
+        return None
+    try:
+        prompt = int(usage.get("prompt_tokens", 0))
+        completion = int(usage.get("completion_tokens", 0))
+        details = usage.get("prompt_tokens_details") or {}
+        cached = int(details.get("cached_tokens", 0))
+    except (TypeError, ValueError):
+        return None
+    cached = min(cached, prompt)
+    cost = ((prompt - cached) * pricing["input"]
+            + cached * pricing["cached_input"]
+            + completion * pricing["output"]) / 1_000_000
+    return round(cost, 6)
 
 
 def parse_impact(text):
@@ -187,26 +281,14 @@ def local_explanation(scenario, verdict, violations, notes, routes, flows):
 def meta_explanation(api_key, model, scenario, verdict, violations, notes):
     """Ask Meta Model API to rewrite the explanation from the same evidence.
 
-    Returns the model text, or None on any failure (caller falls back
-    to the local explanation — the verdict itself never depends on this).
+    Returns (text_or_None, usage_or_None, cost_or_None). On any failure
+    the caller falls back to the local explanation — the verdict itself
+    never depends on this call.
     """
-    evidence = {
-        "change": scenario["title"],
-        "intent": scenario["intent"],
-        "verdict_from_batfish": verdict,
-        "violations": violations,
-        "notes": notes,
-    }
-    prompt = (
-        "You are a network operations assistant. Rewrite the following "
-        "Batfish simulation result as a short plain-language briefing "
-        "for a network engineer (max 5 sentences, Korean). Do NOT invent "
-        "routes, prefixes, or flows beyond the evidence. Keep the verdict "
-        "exactly as given.\n\nEvidence (JSON):\n%s" % json.dumps(evidence, ensure_ascii=False)
-    )
     body = json.dumps({
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user",
+                      "content": build_meta_prompt(scenario, verdict, violations, notes)}],
         "temperature": 0.2,
         "max_tokens": 400,
     }).encode()
@@ -220,29 +302,53 @@ def meta_explanation(api_key, model, scenario, verdict, violations, notes):
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:
             data = json.loads(resp.read())
-        return data["choices"][0]["message"]["content"].strip()
+        text, usage = parse_meta_response(data)
+        return text, usage, estimate_cost(usage, model)
     except Exception as exc:  # noqa: BLE001 - demo fallback path
         print("Meta API call failed (%s); using local explanation." % exc,
               file=sys.stderr)
-        return None
+        return None, None, None
 
 
-def run_one(name):
+def run_one(name, mock=False):
     scenario = SCENARIOS[name]
     print("== %s ==" % scenario["title"])
-    raw = run_batfish(scenario["change_dir"])
+    if mock:
+        raw = run_mock(name)
+        evidence_source = "mock (canned Batfish impact report in demo-data/)"
+    else:
+        if scenario.get("mock_only"):
+            print("Skipping %s: mock-only scenario, no live Batfish overlay." % name)
+            return None
+        raw = run_batfish(scenario["change_dir"])
+        evidence_source = "batfish-live"
     routes, flows = parse_impact(raw)
     verdict, violations, notes = apply_policy(routes, flows)
     explanation = local_explanation(scenario, verdict, violations, notes, routes, flows)
     source = "local-template (no API call, no credit used)"
 
+    # Meta API is the primary explanation path whenever a key is set;
+    # without a key this is skipped explicitly (never silently) and the
+    # local template is used. The verdict never depends on the model.
     api_key = os.environ.get("META_API_KEY", "").strip()
+    model = os.environ.get("META_MODEL", DEFAULT_MODEL)
+    usage, cost, api_note = None, None, None
     if api_key:
-        model = os.environ.get("META_MODEL", "muse-spark-1.3")
-        model_text = meta_explanation(api_key, model, scenario, verdict, violations, notes)
+        model_text, usage, cost = meta_explanation(
+            api_key, model, scenario, verdict, violations, notes)
         if model_text:
             explanation = model_text + "\n[설명 출처: Meta Model API, 판정은 Batfish 증거 기준]"
             source = "Meta Model API (%s)" % model
+        else:
+            api_note = "Meta Model API call failed; fell back to local template."
+    else:
+        model = None
+        api_note = ("Meta Model API explanation skipped: META_API_KEY is not "
+                    "set, so the local template is used. Set META_API_KEY "
+                    "(env var only, never in files) to get a Muse Spark 1.3 "
+                    "explanation. A recorded API-style sample is in "
+                    "demo-output/playground-samples.md.")
+        print(api_note, file=sys.stderr)
 
     result = {
         "scenario": name,
@@ -255,6 +361,11 @@ def run_one(name):
         "flows": flows,
         "explanation": explanation,
         "explanation_source": source,
+        "model": model,
+        "usage": usage,
+        "cost_usd_estimate": cost,
+        "api_note": api_note,
+        "evidence_source": evidence_source,
         "evidence_note": "All data fictional (RFC 5737, AS 64496-64498). "
                          "Batfish raw output is in the .txt report.",
     }
@@ -295,12 +406,20 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--change", choices=list(SCENARIOS))
     ap.add_argument("--all", action="store_true")
+    ap.add_argument("--mock", action="store_true",
+                    help="use canned Batfish impact reports in demo-data/ "
+                         "(no Batfish server, Java or venv needed)")
     args = ap.parse_args()
     names = list(SCENARIOS) if args.all else [args.change]
     if not names:
         ap.error("give --change <name> or --all")
+    if not args.mock:
+        skipped = [n for n in names if SCENARIOS[n].get("mock_only")]
+        names = [n for n in names if not SCENARIOS[n].get("mock_only")]
+        for n in skipped:
+            print("Skipping %s in live mode (mock-only scenario)." % n)
     for name in names:
-        run_one(name)
+        run_one(name, mock=args.mock)
         print()
     return 0
 

@@ -1,0 +1,106 @@
+{
+  "scenario": "add-customer-prefix",
+  "title": "Add new customer prefix: 203.0.113.128/25 appears at edge1",
+  "intent": "Announce a new fictional customer prefix 203.0.113.128/25 without touching any existing watched prefix or flow. A new route should be REVIEW, not ALLOW, because a human must confirm the new announcement is intended.",
+  "verdict": "REVIEW",
+  "violations": [],
+  "notes": [
+    "New route for 203.0.113.128/25 at edge1 (bgp via ip 198.51.100.6)"
+  ],
+  "routes": [
+    {
+      "node": "core1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "core1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "core1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "core2",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "core2",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "core2",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "ibgp via ip 192.0.2.3",
+      "change": "ibgp via ip 192.0.2.3"
+    },
+    {
+      "node": "edge1",
+      "prefix": "192.0.2.0/24",
+      "verdict": "UNCHANGED",
+      "base": "static via discard",
+      "change": "static via discard"
+    },
+    {
+      "node": "edge1",
+      "prefix": "198.51.100.128/25",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.2",
+      "change": "bgp via ip 198.51.100.2"
+    },
+    {
+      "node": "edge1",
+      "prefix": "203.0.113.0/24",
+      "verdict": "UNCHANGED",
+      "base": "bgp via ip 198.51.100.6",
+      "change": "bgp via ip 198.51.100.6"
+    },
+    {
+      "node": "edge1",
+      "prefix": "203.0.113.128/25",
+      "verdict": "ROUTE ADDED",
+      "base": "None",
+      "change": "bgp via ip 198.51.100.6"
+    }
+  ],
+  "flows": [
+    {
+      "start": "core1",
+      "dst_ip": "198.51.100.130",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    },
+    {
+      "start": "core1",
+      "dst_ip": "203.0.113.10",
+      "verdict": "UNCHANGED",
+      "base": "DELIVERED_TO_SUBNET",
+      "change": "DELIVERED_TO_SUBNET"
+    }
+  ],
+  "explanation": "의도: Announce a new fictional customer prefix 203.0.113.128/25 without touching any existing watched prefix or flow. A new route should be REVIEW, not ALLOW, because a human must confirm the new announcement is intended.\n판정: 재검토 필요. 아래 변경 사항을 확인한 뒤 적용 여부를 결정하세요.\n- 참고: New route for 203.0.113.128/25 at edge1 (bgp via ip 198.51.100.6)\n영향 받은 prefix: 203.0.113.128/25",
+  "explanation_source": "local-template (no API call, no credit used)",
+  "model": null,
+  "usage": null,
+  "cost_usd_estimate": null,
+  "api_note": "Meta Model API explanation skipped: META_API_KEY is not set, so the local template is used. Set META_API_KEY (env var only, never in files) to get a Muse Spark 1.3 explanation. A recorded API-style sample is in demo-output/playground-samples.md.",
+  "evidence_source": "mock (canned Batfish impact report in demo-data/)",
+  "evidence_note": "All data fictional (RFC 5737, AS 64496-64498). Batfish raw output is in the .txt report."
+}
