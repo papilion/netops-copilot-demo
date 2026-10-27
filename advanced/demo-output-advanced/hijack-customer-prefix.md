@@ -10,7 +10,15 @@
 
 ## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
 
-AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): cust1 트래픽을 막다른 길로 빼앗는 more-specific 발표를 거부하고, 정당한 cust1 경로를 복원하세요. 고객 prefix를 peer를 통해 받아들이면 안 됩니다. 그다음 다시 시뮬레이션해서 cust1 flow가 다시 전달되는지 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+설명 (Meta Model API, muse-spark-1.3):
+
+Batfish 판정은 BLOCK입니다. 이번 변경은 peer2가 cust1의 /24에 대해 203.0.113.0/25를 Null0으로 발표하는 more-specific hijack입니다. coreA1 -> 203.0.113.10 트래픽이 DELIVERED_TO_SUBNET에서 NULL_ROUTED로 바뀌어 중단됩니다. coreB2 -> 203.0.113.10 트래픽도 DELIVERED_TO_SUBNET에서 NULL_ROUTED로 바뀌어 중단됩니다.
+
+제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다. Meta Model API muse-spark-1.3이 규칙 기반 제안을 다듬은 것입니다):
+
+BLOCK 판정입니다. peer2의 203.0.113.0/25 more-specific 발표를 거부하고 peer 경유로 고객 prefix를 받지 않아 cust1의 정당한 경로를 복원하세요. coreA1·coreB2에서 203.0.113.10으로 가는 흐름이 복구되는지 반드시 시뮬레이션으로 확인하기 전에는 이 제안을 신뢰하지 마세요.
+
+판정은 Batfish 증거 기준이며, 이 설명과 제안은 판정이 아닙니다. 제안은 적용하기 전에 다시 시뮬레이션해야 합니다.
 
 ## Evidence (Batfish, batfish-live-advanced)
 

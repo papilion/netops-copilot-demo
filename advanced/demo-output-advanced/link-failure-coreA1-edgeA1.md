@@ -8,7 +8,15 @@
 
 ## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
 
-AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 감시 대상 경로가 사라지지 않았고 감시 대상 flow도 깨지지 않았으므로, 감시 범위 내에서는 안전한 변경입니다. 제안대로 적용한 뒤, 적용 후 다시 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+설명 (Meta Model API, muse-spark-1.3):
+
+coreA1-edgeA1 링크 셧다운에 대한 Batfish 시뮬레이션 결과입니다. 의도한 coreA2 경유 우회와 감시 대상 플로우 유지 조건을 확인했습니다. 위반 사항이 없으며 최종 판정은 ALLOW 입니다. 별도 메모는 없습니다.
+
+제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다. Meta Model API muse-spark-1.3이 규칙 기반 제안을 다듬은 것입니다):
+
+Batfish 결과는 ALLOW이며, 감시 범위 내에서는 coreA1-edgeA1 링크 차단 시에도 감시 대상 flow가 깨지지 않아 안전한 변경으로 보입니다. 믿기 전에 반드시 시뮬레이션으로 검증하고, 적용 후에도 다시 확인하세요.
+
+판정은 Batfish 증거 기준이며, 이 설명과 제안은 판정이 아닙니다. 제안은 적용하기 전에 다시 시뮬레이션해야 합니다.
 
 ## Evidence (Batfish, batfish-live-advanced)
 

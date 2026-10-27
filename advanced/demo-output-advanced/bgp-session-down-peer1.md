@@ -16,7 +16,17 @@
 
 ## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
 
-AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 경로를 사라지게 한 변경을 제거하거나 수정하세요 (예: 차단 필터 제거, 세션 복원). 다른 것을 적용하기 전에 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+설명 (Meta Model API, muse-spark-1.3):
+
+edgeA1-peer1 eBGP 세션 shutdown 변경에 대한 Batfish 판정은 BLOCK입니다.
+감시 prefix 198.51.100.128/25가 corea1, corea2, coreb1, coreb2, edgea1, edgea2, edgeb1에서 LOST로 확인되었습니다.
+감시 flow coreA1에서 198.51.100.130으로의 전달도 DELIVERED_TO_SUBNET에서 NO_ROUTE로 중단되었습니다.
+
+제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다. Meta Model API muse-spark-1.3이 규칙 기반 제안을 다듬은 것입니다):
+
+Batfish 판정은 BLOCK이므로 edgeA1-peer1 세션 shutdown 변경을 되돌리는 것을 검토하세요. 198.51.100.128/25 경로 손실과 coreA1→198.51.100.130 흐름 중단이 확인되었습니다. 이 제안을 신뢰하기 전과 다른 조치를 적용하기 전에 반드시 다시 시뮬레이션하세요.
+
+판정은 Batfish 증거 기준이며, 이 설명과 제안은 판정이 아닙니다. 제안은 적용하기 전에 다시 시뮬레이션해야 합니다.
 
 ## Evidence (Batfish, batfish-live-advanced)
 

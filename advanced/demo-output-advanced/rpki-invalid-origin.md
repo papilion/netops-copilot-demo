@@ -17,7 +17,15 @@
 
 ## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
 
-AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): peer2의 유효하지 않은 발표를 거부하고, AS64498만 203.0.113.0/24를 발표할 수 있도록 ROA를 수정하세요. 그다음 정당한 AS64498 발표를 다시 시뮬레이션해서 ALLOW인지 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+설명 (Meta Model API, muse-spark-1.3):
+
+판정은 BLOCK입니다. peer2(AS64499)가 고객 prefix 203.0.113.0/24를 발표했으며, 해당 ROA는 AS64498만 허용하므로 RPKI invalid로 거부해야 합니다. edgeb1에서 해당 prefix 경로가 198.51.100.18에서 직접 eBGP 피어 넥스트홉 198.51.100.10으로 바뀌었고, core/edge 장비들에서도 192.0.2.4에서 192.0.2.7로의 경로 이동이 관찰됐습니다. Batfish routes 조회는 AS_PATH를 노출하지 않아 넥스트홉 IP를 프록시로 사용했으며, ROV 상태 검증 불가로 recorded-replay-only 시나리오입니다.
+
+제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다. Meta Model API muse-spark-1.3이 규칙 기반 제안을 다듬은 것입니다):
+
+203.0.113.0/24에 대한 peer2(AS64499)의 발표는 ROA(AS64498만 허용)에 어긋나므로 BLOCK으로 거부해야 합니다. AS64498의 정당한 발표는 차단되지 않도록 ROV 설정을 확인하세요. 이 제안을 신뢰하기 전에 반드시 시뮬레이션으로 검증하세요.
+
+판정은 Batfish 증거 기준이며, 이 설명과 제안은 판정이 아닙니다. 제안은 적용하기 전에 다시 시뮬레이션해야 합니다.
 
 ## Evidence (Batfish, recorded-replay-only (fictional ROA check; Batfish ROV not verifiable))
 

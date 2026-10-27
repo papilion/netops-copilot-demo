@@ -12,7 +12,15 @@
 
 ## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
 
-AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 경로를 사라지게 한 변경을 제거하거나 수정하세요 (예: 차단 필터 제거, 세션 복원). 다른 것을 적용하기 전에 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+설명 (Meta Model API, muse-spark-1.3):
+
+edge1에서 peer1(AS64497)로부터 198.51.100.128/25를 인바운드 차단하도록 BGP 필터를 변경했습니다. 판정: BLOCK. core1과 core2에서 198.51.100.128/25 경로가 소실되었고(기존 ibgp via ip 192.0.2.3), edge1에서도 해당 경로가 소실되었습니다(기존 bgp via ip 198.51.100.2). core1에서 198.51.100.130으로 가는 플로우는 DELIVERED_TO_SUBNET에서 NO_ROUTE로 바뀌어 더 이상 전달되지 않습니다.
+
+제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다. Meta Model API muse-spark-1.3이 규칙 기반 제안을 다듬은 것입니다):
+
+Batfish 검증 결과 BLOCK이므로 이 inbound 차단 변경을 적용하지 마세요. edge1의 peer1용 deny 필터를 제거하거나 수정해 198.51.100.128/25 경로 유지를 검토하세요. 이 제안을 믿기 전에 반드시 다시 시뮬레이션하세요.
+
+판정은 Batfish 증거 기준이며, 이 설명과 제안은 판정이 아닙니다. 제안은 적용하기 전에 다시 시뮬레이션해야 합니다.
 
 ## Evidence (Batfish)
 

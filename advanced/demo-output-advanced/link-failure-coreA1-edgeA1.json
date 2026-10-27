@@ -296,9 +296,54 @@
       "change": "DELIVERED_TO_SUBNET"
     }
   ],
-  "explanation": "의도: Shutdown the coreA1-edgeA1 link; traffic must reroute via coreA2 and all watched flows must survive.\n판정: 적용 가능 (감시 범위 내). 감시 대상 prefix의 경로가 사라지지 않았고, 감시 대상 flow도 모두 유지됐습니다. 판정은 감시 대상 항목 기준이며, 감시 범위 밖의 전달 경로 변화까지 보장하지 않습니다.\n영향 받은 prefix: 없음",
-  "proposed_next_step": "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 감시 대상 경로가 사라지지 않았고 감시 대상 flow도 깨지지 않았으므로, 감시 범위 내에서는 안전한 변경입니다. 제안대로 적용한 뒤, 적용 후 다시 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.",
-  "proposed_next_step_source": "rule-based (no API call)",
+  "explanation": "coreA1-edgeA1 링크 셧다운에 대한 Batfish 시뮬레이션 결과입니다. 의도한 coreA2 경유 우회와 감시 대상 플로우 유지 조건을 확인했습니다. 위반 사항이 없으며 최종 판정은 ALLOW 입니다. 별도 메모는 없습니다.",
+  "proposed_next_step": "Batfish 결과는 ALLOW이며, 감시 범위 내에서는 coreA1-edgeA1 링크 차단 시에도 감시 대상 flow가 깨지지 않아 안전한 변경으로 보입니다. 믿기 전에 반드시 시뮬레이션으로 검증하고, 적용 후에도 다시 확인하세요.",
+  "proposed_next_step_source": "Meta Model API (muse-spark-1.3)",
   "evidence_source": "batfish-live-advanced",
-  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)"
+  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)",
+  "explanation_source": "Meta Model API (muse-spark-1.3)",
+  "model": "muse-spark-1.3",
+  "usage": {
+    "completion_tokens": 1355,
+    "prompt_tokens": 130,
+    "total_tokens": 1485,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1282
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "cost_usd_estimate": 0.005921,
+  "api_calls": {
+    "explanation": {
+      "usage": {
+        "completion_tokens": 1355,
+        "prompt_tokens": 130,
+        "total_tokens": 1485,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1282
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.005921
+    },
+    "proposal_refinement": {
+      "usage": {
+        "completion_tokens": 1505,
+        "prompt_tokens": 203,
+        "total_tokens": 1708,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1439
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.00665
+    }
+  },
+  "total_cost_usd_estimate": 0.012571
 }

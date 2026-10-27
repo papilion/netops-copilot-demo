@@ -15,7 +15,15 @@
 
 ## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
 
-AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 먼저 사람이 의도를 확인하세요. 새 경로 또는 출구가 정말 의도한 것이 맞는지, 새 출구가 트래픽을 감당할 수 있는지(용량과 지연) 확인하세요. 확인한 뒤에만 적용하고, 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+설명 (Meta Model API, muse-spark-1.3):
+
+edgeA2에서 cust1에 대한 prepend 변경으로 203.0.113.0/24 경로 이동이 확인됐습니다. corea1, corea2, coreb1, coreb2, edgea1은 ibgp via 192.0.2.4에서 ibgp via 192.0.2.7로 바뀌었고, edgea2는 bgp via 198.51.100.6에서 ibgp via 192.0.2.7로 바뀌었습니다. 출구는 edgeA2(192.0.2.4)에서 edgeB1(192.0.2.7)로 이동했고 플로우는 유지됩니다. 위반은 없으며 판정은 REVIEW로, 새 출구는 사람의 확인이 필요합니다.
+
+제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다. Meta Model API muse-spark-1.3이 규칙 기반 제안을 다듬은 것입니다):
+
+판정은 REVIEW를 유지합니다. 203.0.113.0/24의 출구가 edgeA2(192.0.2.4)에서 edgeB1(192.0.2.7)로 이동하는 것이 의도와 일치하는지, 새 출구의 용량·지연을 사람이 먼저 확인한 뒤 적용하세요. 이 제안을 신뢰하기 전에 반드시 시뮬레이션으로 다시 검증하세요.
+
+판정은 Batfish 증거 기준이며, 이 설명과 제안은 판정이 아닙니다. 제안은 적용하기 전에 다시 시뮬레이션해야 합니다.
 
 ## Evidence (Batfish, batfish-live-advanced)
 

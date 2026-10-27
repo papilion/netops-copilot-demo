@@ -86,14 +86,54 @@
       "change": "DELIVERED_TO_SUBNET"
     }
   ],
-  "explanation": "의도: Shift traffic so core1 reaches edge1 via core2 instead of directly, without breaking any watched prefix or flow.\n판정: 적용 가능 (감시 범위 내). 감시 대상 prefix의 경로가 사라지지 않았고, 감시 대상 flow도 모두 유지됐습니다. 판정은 감시 대상 항목 기준이며, 감시 범위 밖의 전달 경로 변화까지 보장하지 않습니다.\n영향 받은 prefix: 없음",
-  "proposed_next_step": "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 감시 대상 경로가 사라지지 않았고 감시 대상 flow도 깨지지 않았으므로, 감시 범위 내에서는 안전한 변경입니다. 제안대로 적용한 뒤, 적용 후 다시 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.",
-  "proposed_next_step_source": "rule-based (no API call)",
-  "explanation_source": "local-template (no API call, no credit used)",
-  "model": null,
-  "usage": null,
-  "cost_usd_estimate": null,
-  "api_note": "Meta Model API explanation skipped: META_API_KEY is not set, so the local template is used. Set META_API_KEY (env var only, never in files) to get a Muse Spark 1.3 explanation. A recorded API-style sample is in demo-output/playground-samples.md.",
+  "explanation": "core1 -> edge1 구간 OSPF 비용을 10에서 100으로 올리는 변경을 시뮬레이션했습니다.\n의도는 감시 중인 prefix나 flow를 깨지 않으면서 core1에서 edge1로 가는 트래픽을 직접 경로 대신 core2 경유로 돌리는 것입니다.\nBatfish 판정은 ALLOW이며 violations와 notes가 없습니다.",
+  "proposed_next_step": "Batfish 검증 결과는 ALLOW로 감시 범위 내에서는 core1→edge1 비용 10→100 상향으로 core2 경유 유도가 가능합니다. 적용 전 반드시 시뮬레이션으로 검증하세요.",
+  "proposed_next_step_source": "Meta Model API (muse-spark-1.3)",
+  "explanation_source": "Meta Model API (muse-spark-1.3)",
+  "model": "muse-spark-1.3",
+  "usage": {
+    "completion_tokens": 991,
+    "prompt_tokens": 135,
+    "total_tokens": 1126,
+    "completion_tokens_details": {
+      "reasoning_tokens": 906
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "cost_usd_estimate": 0.00438,
   "evidence_source": "batfish-live",
-  "evidence_note": "All data fictional (RFC 5737, AS 64496-64498). Batfish raw output is in the .txt report."
+  "evidence_note": "All data fictional (RFC 5737, AS 64496-64498). Batfish raw output is in the .txt report.",
+  "api_calls": {
+    "explanation": {
+      "usage": {
+        "completion_tokens": 991,
+        "prompt_tokens": 135,
+        "total_tokens": 1126,
+        "completion_tokens_details": {
+          "reasoning_tokens": 906
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.00438
+    },
+    "proposal_refinement": {
+      "usage": {
+        "completion_tokens": 1403,
+        "prompt_tokens": 208,
+        "total_tokens": 1611,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1348
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.006223
+    }
+  },
+  "total_cost_usd_estimate": 0.010603
 }

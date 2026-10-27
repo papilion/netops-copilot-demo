@@ -8,7 +8,17 @@
 
 ## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
 
-AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 감시 대상 경로가 사라지지 않았고 감시 대상 flow도 깨지지 않았으므로, 감시 범위 내에서는 안전한 변경입니다. 제안대로 적용한 뒤, 적용 후 다시 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+설명 (Meta Model API, muse-spark-1.3):
+
+core1 -> edge1 구간 OSPF 비용을 10에서 100으로 올리는 변경을 시뮬레이션했습니다.
+의도는 감시 중인 prefix나 flow를 깨지 않으면서 core1에서 edge1로 가는 트래픽을 직접 경로 대신 core2 경유로 돌리는 것입니다.
+Batfish 판정은 ALLOW이며 violations와 notes가 없습니다.
+
+제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다. Meta Model API muse-spark-1.3이 규칙 기반 제안을 다듬은 것입니다):
+
+Batfish 검증 결과는 ALLOW로 감시 범위 내에서는 core1→edge1 비용 10→100 상향으로 core2 경유 유도가 가능합니다. 적용 전 반드시 시뮬레이션으로 검증하세요.
+
+판정은 Batfish 증거 기준이며, 이 설명과 제안은 판정이 아닙니다. 제안은 적용하기 전에 다시 시뮬레이션해야 합니다.
 
 ## Evidence (Batfish)
 

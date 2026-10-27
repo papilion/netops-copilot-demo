@@ -95,14 +95,54 @@
       "change": "DELIVERED_TO_SUBNET"
     }
   ],
-  "explanation": "의도: Announce a new fictional customer prefix 203.0.113.128/25 without touching any existing watched prefix or flow. A new route should be REVIEW, not ALLOW, because a human must confirm the new announcement is intended.\n판정: 재검토 필요. 아래 변경 사항을 확인한 뒤 적용 여부를 결정하세요.\n- 참고: New route for 203.0.113.128/25 at edge1 (bgp via ip 198.51.100.6)\n영향 받은 prefix: 203.0.113.128/25",
-  "proposed_next_step": "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 먼저 사람이 의도를 확인하세요. 새 경로 또는 출구가 정말 의도한 것이 맞는지, 새 출구가 트래픽을 감당할 수 있는지(용량과 지연) 확인하세요. 확인한 뒤에만 적용하고, 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.",
-  "proposed_next_step_source": "rule-based (no API call)",
-  "explanation_source": "local-template (no API call, no credit used)",
-  "model": null,
-  "usage": null,
-  "cost_usd_estimate": null,
-  "api_note": "Meta Model API explanation skipped: META_API_KEY is not set, so the local template is used. Set META_API_KEY (env var only, never in files) to get a Muse Spark 1.3 explanation. A recorded API-style sample is in demo-output/playground-samples.md.",
+  "explanation": "edge1에서 BGP(198.51.100.6 경유)로 203.0.113.128/25에 대한 신규 경로가 확인되었습니다. violations는 비어 있습니다. 신규 발표는 사람의 확인이 필요하므로 판정은 REVIEW입니다.",
+  "proposed_next_step": "판정은 REVIEW입니다. edge1에 나타난 203.0.113.128/25 신규 경로(bgp via 198.51.100.6)가 의도한 고객 prefix 발표인지 사람이 먼저 확인하세요. 확인 후에만 적용하고, 이 제안을 믿기 전에 반드시 시뮬레이션하세요.",
+  "proposed_next_step_source": "Meta Model API (muse-spark-1.3)",
+  "explanation_source": "Meta Model API (muse-spark-1.3)",
+  "model": "muse-spark-1.3",
+  "usage": {
+    "completion_tokens": 1350,
+    "prompt_tokens": 191,
+    "total_tokens": 1541,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1289
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "cost_usd_estimate": 0.005976,
   "evidence_source": "mock (canned Batfish impact report in demo-data/)",
-  "evidence_note": "All data fictional (RFC 5737, AS 64496-64498). Batfish raw output is in the .txt report."
+  "evidence_note": "All data fictional (RFC 5737, AS 64496-64498). Batfish raw output is in the .txt report.",
+  "api_calls": {
+    "explanation": {
+      "usage": {
+        "completion_tokens": 1350,
+        "prompt_tokens": 191,
+        "total_tokens": 1541,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1289
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.005976
+    },
+    "proposal_refinement": {
+      "usage": {
+        "completion_tokens": 1128,
+        "prompt_tokens": 283,
+        "total_tokens": 1411,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1052
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.005148
+    }
+  },
+  "total_cost_usd_estimate": 0.011124
 }

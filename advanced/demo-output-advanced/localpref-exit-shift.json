@@ -304,9 +304,54 @@
       "change": "DELIVERED_TO_SUBNET"
     }
   ],
-  "explanation": "의도: Raise LOCAL_PREF to 200 for cust1 at edgeB1; every core must shift the cust1 exit from edgeA2 to edgeB1, with all flows surviving.\n판정: 재검토 필요. 아래 변경 사항을 확인한 뒤 적용 여부를 결정하세요.\n- 참고: Path shift for 203.0.113.0/24 at corea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at corea2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at coreb1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at coreb2: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at edgea1: ibgp via ip 192.0.2.4 -> ibgp via ip 192.0.2.7\n- 참고: Path shift for 203.0.113.0/24 at edgea2: bgp via ip 198.51.100.6 -> ibgp via ip 192.0.2.7\n- 참고: Exit shift for 203.0.113.0/24: edgeA2 -> edgeB1 (192.0.2.4 -> 192.0.2.7); flows survive, but the new exit must be confirmed by a human.\n영향 받은 prefix: 203.0.113.0/24",
-  "proposed_next_step": "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 먼저 사람이 의도를 확인하세요. 새 경로 또는 출구가 정말 의도한 것이 맞는지, 새 출구가 트래픽을 감당할 수 있는지(용량과 지연) 확인하세요. 확인한 뒤에만 적용하고, 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.",
-  "proposed_next_step_source": "rule-based (no API call)",
+  "explanation": "Batfish 판정: REVIEW입니다. cust1(203.0.113.0/24)에 대해 edgeB1에서 LOCAL_PREF 200 적용 의도대로 corea1, corea2, coreb1, coreb2와 edgea1, edgea2에서 경로가 edgeA2(192.0.2.4)에서 edgeB1(192.0.2.7)로 이동했습니다. 위반 사항은 없으며 모든 플로우는 유지됩니다. 단, 새 출구 edgeB1은 사람의 최종 확인이 필요합니다.",
+  "proposed_next_step": "판정은 REVIEW를 유지합니다. 203.0.113.0/24의 출구가 edgeA2(192.0.2.4)에서 edgeB1(192.0.2.7)로 이동한 것이 의도와 맞는지, 새 출구의 용량과 지연을 사람이 확인한 뒤에만 적용하세요. 이 제안을 믿기 전에 반드시 시뮬레이션으로 검증하세요.",
+  "proposed_next_step_source": "Meta Model API (muse-spark-1.3)",
   "evidence_source": "batfish-live-advanced",
-  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)"
+  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)",
+  "explanation_source": "Meta Model API (muse-spark-1.3)",
+  "model": "muse-spark-1.3",
+  "usage": {
+    "completion_tokens": 1719,
+    "prompt_tokens": 478,
+    "total_tokens": 2197,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1595
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 355
+    }
+  },
+  "cost_usd_estimate": 0.007513,
+  "api_calls": {
+    "explanation": {
+      "usage": {
+        "completion_tokens": 1719,
+        "prompt_tokens": 478,
+        "total_tokens": 2197,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1595
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 355
+        }
+      },
+      "cost_usd_estimate": 0.007513
+    },
+    "proposal_refinement": {
+      "usage": {
+        "completion_tokens": 1735,
+        "prompt_tokens": 570,
+        "total_tokens": 2305,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1641
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.008086
+    }
+  },
+  "total_cost_usd_estimate": 0.015599
 }

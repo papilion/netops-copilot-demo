@@ -43,7 +43,15 @@
 
 ## AI explanation / proposed next step (to be re-simulated — NOT the verdict)
 
-AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 경로를 사라지게 한 변경을 제거하거나 수정하세요 (예: 차단 필터 제거, 세션 복원). 다른 것을 적용하기 전에 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.
+설명 (Meta Model API, muse-spark-1.3):
+
+rr1 인터페이스 shutdown 상황을 시뮬레이션했습니다. corea1, corea2, coreb1, coreb2, edgea1, edgea2, edgeb1에서 감시 대상 prefix들의 iBGP 경로가 상실되었습니다. coreA1, coreA2, coreB1, coreB2 출발 감시 플로우가 DELIVERED_TO_SUBNET에서 NO_ROUTE 상태로 중단되었습니다. 판정은 BLOCK입니다.
+
+제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다. Meta Model API muse-spark-1.3이 규칙 기반 제안을 다듬은 것입니다):
+
+rr1 인터페이스 shutdown을 되돌려 iBGP 세션을 복원하세요. (판정: BLOCK) 이 제안을 신뢰하기 전에 반드시 시뮬레이션으로 검증하세요.
+
+판정은 Batfish 증거 기준이며, 이 설명과 제안은 판정이 아닙니다. 제안은 적용하기 전에 다시 시뮬레이션해야 합니다.
 
 ## Evidence (Batfish, batfish-live-advanced)
 

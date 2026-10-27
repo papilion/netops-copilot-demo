@@ -298,9 +298,54 @@
       "change": "DELIVERED_TO_SUBNET"
     }
   ],
-  "explanation": "의도: DDoS mitigation for cust2: drop ONLY the victim host 203.0.113.130/32 at edgeB1 (border /32 Null0 route, the forwarding effect an RTBH trigger installs). A DDoS usually targets one host, so operators blackhole the /32, not the whole cust2 /25 — blackholing the whole /25 would also kill the customer's innocent hosts on the same prefix, so the /32 minimises collateral. The /25 route must stay intact and every other watched prefix and flow must stay intact, and the victim drop must be recognised as intended, not as an accidental outage.\n판정: 재검토 필요. 아래 변경 사항을 확인한 뒤 적용 여부를 결정하세요.\n- 참고: Intended blackhole: only the declared victim host 203.0.113.130/32 is dropped (DDoS mitigation, /32 host route); the victim's /25 prefix route and all other watched prefixes and flows are intact. Confirm the victim is the intended one before applying.\n영향 받은 prefix: 없음",
-  "proposed_next_step": "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): 차단은 /32 호스트 203.0.113.130에만 유지하세요. cust2 /25 전체로 넓히면 안 됩니다. 넓히면 같은 prefix의 무고한 고객 호스트까지 죽습니다. /32가 부수 피해를 줄이는 최적화입니다. 피해자 호스트를 확인하고, 만료와 해제 계획을 정한 뒤, 해제 후 트래픽이 돌아오는지 다시 시뮬레이션하세요. 이 제안도 믿기 전에 시뮬레이션하세요.",
-  "proposed_next_step_source": "rule-based (no API call)",
+  "explanation": "Batfish 판정은 REVIEW입니다.\n이번 변경은 edgeB1에서 203.0.113.130/32 단일 호스트만 드롭하는 DDoS 대응 RTBH 블랙홀(/32 Null0)입니다.\n해당 /32를 제외하고 cust2의 /25 경로와 나머지 감시 대상 prefix·flow는 모두 유지되며 위반 사항은 없습니다.\n적용 전 피해 호스트가 의도한 대상인지 확인하십시오.",
+  "proposed_next_step": "edgeB1에서 203.0.113.130/32 피해 호스트에 대한 차단만 유지하고 cust2 /25 전체로 넓히지 마세요, /25를 넓히면 같은 prefix의 정상 호스트까지 차단됩니다. 적용 전에 피해자가 맞는지와 만료·해제 계획을 확인하세요, 현재 판정은 REVIEW입니다. 이 제안을 믿기 전에 반드시 시뮬레이션으로 검증하세요.",
+  "proposed_next_step_source": "Meta Model API (muse-spark-1.3)",
   "evidence_source": "batfish-live-advanced",
-  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)"
+  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)",
+  "explanation_source": "Meta Model API (muse-spark-1.3)",
+  "model": "muse-spark-1.3",
+  "usage": {
+    "completion_tokens": 1542,
+    "prompt_tokens": 311,
+    "total_tokens": 1853,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1444
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "cost_usd_estimate": 0.006942,
+  "api_calls": {
+    "explanation": {
+      "usage": {
+        "completion_tokens": 1542,
+        "prompt_tokens": 311,
+        "total_tokens": 1853,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1444
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.006942
+    },
+    "proposal_refinement": {
+      "usage": {
+        "completion_tokens": 1979,
+        "prompt_tokens": 438,
+        "total_tokens": 2417,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1880
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.008958
+    }
+  },
+  "total_cost_usd_estimate": 0.0159
 }

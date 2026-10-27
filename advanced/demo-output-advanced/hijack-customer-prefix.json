@@ -299,9 +299,54 @@
       "change": "NULL_ROUTED"
     }
   ],
-  "explanation": "의도: Peer2 announces a more-specific of cust1's /24; traffic to 203.0.113.10 must divert to peer2's Null0 and break. See README-advanced.md for why the exact /24 announcement was replaced: Batfish kept the legitimate best path for /24, so the classic more-specific hijack is the scenario that actually diverts traffic in this lab.\n판정: 적용 중단. 아래 영향이 확인됐기 때문에, 의도가 정확히 이 영향과 일치하지 않는 한 운영망에 적용하면 안 됩니다.\n- 위반: Watched flow coreA1 -> 203.0.113.10 stops working: DELIVERED_TO_SUBNET -> NULL_ROUTED (diverted to a Null0, e.g. by a more-specific hijack)\n- 위반: Watched flow coreB2 -> 203.0.113.10 stops working: DELIVERED_TO_SUBNET -> NULL_ROUTED (diverted to a Null0, e.g. by a more-specific hijack)\n영향 받은 prefix: 없음",
-  "proposed_next_step": "AI 설명 / 제안하는 다음 단계 (재시뮬레이션 필요 — 판정이 아닙니다): cust1 트래픽을 막다른 길로 빼앗는 more-specific 발표를 거부하고, 정당한 cust1 경로를 복원하세요. 고객 prefix를 peer를 통해 받아들이면 안 됩니다. 그다음 다시 시뮬레이션해서 cust1 flow가 다시 전달되는지 확인하세요. 이 제안도 믿기 전에 시뮬레이션하세요.",
-  "proposed_next_step_source": "rule-based (no API call)",
+  "explanation": "Batfish 판정은 BLOCK입니다. 이번 변경은 peer2가 cust1의 /24에 대해 203.0.113.0/25를 Null0으로 발표하는 more-specific hijack입니다. coreA1 -> 203.0.113.10 트래픽이 DELIVERED_TO_SUBNET에서 NULL_ROUTED로 바뀌어 중단됩니다. coreB2 -> 203.0.113.10 트래픽도 DELIVERED_TO_SUBNET에서 NULL_ROUTED로 바뀌어 중단됩니다.",
+  "proposed_next_step": "BLOCK 판정입니다. peer2의 203.0.113.0/25 more-specific 발표를 거부하고 peer 경유로 고객 prefix를 받지 않아 cust1의 정당한 경로를 복원하세요. coreA1·coreB2에서 203.0.113.10으로 가는 흐름이 복구되는지 반드시 시뮬레이션으로 확인하기 전에는 이 제안을 신뢰하지 마세요.",
+  "proposed_next_step_source": "Meta Model API (muse-spark-1.3)",
   "evidence_source": "batfish-live-advanced",
-  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)"
+  "policy": "advanced (simple policy + E1 NULL_ROUTED fatal, E2 exit-shift REVIEW, E3 hijack peer-next-hop BLOCK, E4 intended-blackhole REVIEW, E5 RPKI invalid-origin BLOCK)",
+  "explanation_source": "Meta Model API (muse-spark-1.3)",
+  "model": "muse-spark-1.3",
+  "usage": {
+    "completion_tokens": 1768,
+    "prompt_tokens": 292,
+    "total_tokens": 2060,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1651
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "cost_usd_estimate": 0.007879,
+  "api_calls": {
+    "explanation": {
+      "usage": {
+        "completion_tokens": 1768,
+        "prompt_tokens": 292,
+        "total_tokens": 2060,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1651
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.007879
+    },
+    "proposal_refinement": {
+      "usage": {
+        "completion_tokens": 1905,
+        "prompt_tokens": 389,
+        "total_tokens": 2294,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1808
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "cost_usd_estimate": 0.008582
+    }
+  },
+  "total_cost_usd_estimate": 0.016461
 }

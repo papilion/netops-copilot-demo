@@ -443,7 +443,12 @@ def meta_explanation(api_key, model, scenario, verdict, violations, notes,
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.2,
-        "max_tokens": 400,
+        # 2026-10-27 live test: Muse Spark 1.3 spends ~965 tokens on
+        # reasoning before answering, so 400 produced an empty reply
+        # (finish_reason "length"). 2000 worked for most scenarios, but
+        # bgp-session-down and aspath-prepend truncated mid-sentence
+        # (reasoning ~1,850-2,190 tokens), so 3000 is the safe budget.
+        "max_tokens": 3000,
     }).encode()
     req = urllib.request.Request(
         "https://api.meta.ai/v1/chat/completions",
