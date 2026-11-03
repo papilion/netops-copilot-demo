@@ -36,7 +36,7 @@ If a new route appears or a flow changes non-fatally, it is REVIEW; if only next
 
 ```bash
 python3 copilot.py --mock --all   # no Batfish needed, ~1 second, 3 verdicts
-python3 -m unittest discover -s tests   # 26 tests (simple 8 + advanced 18)
+python3 -m unittest discover -s tests   # 47 tests (simple policy 8, CLI view 6, AI proposal 6, advanced 19, web 8)
 ```
 
 `--mock` uses the recorded Batfish impact reports in `demo-data/`.

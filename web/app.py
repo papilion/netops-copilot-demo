@@ -336,6 +336,7 @@ class Handler(BaseHTTPRequestHandler):
             result = validate(name, mode, lang, vendor)
         except ValueError as exc:
             self._json(400, {"error": str(exc)})
+            return
         except Exception as exc:
             # Live Batfish unreachable (or harness failure): say so
             # plainly, give the exact start command, never fake a verdict.

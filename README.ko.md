@@ -46,7 +46,7 @@ Codespace 이름을 클릭하면 2~5분이면 됩니다. 처음 쓰는 사람을
 
 ```bash
 python3 copilot.py --mock --all   # Batfish 불필요, ~1초, 3개 판정
-python3 -m unittest discover -s tests   # 테스트 26개 (단순 8 + 고급 18)
+python3 -m unittest discover -s tests   # 테스트 47개 (단순 정책 8, CLI 6, AI 제안 6, 고급 19, 웹 8)
 ```
 
 `--mock`은 `demo-data/`의 기록된 Batfish impact report를 씁니다.
